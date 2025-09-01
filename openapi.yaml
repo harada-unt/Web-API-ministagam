@@ -1,0 +1,727 @@
+openapi: 3.0.3
+
+info:
+  title: Instagram風SNSアプリ
+  description: |
+    ## 認証について
+    - JWT/Laravel Sanctumトークンベース認証
+    - 認証が必要なエンドポイントは `Authorization: Bearer {token}` ヘッダーが必要
+    Instagram風アプリmInistagamのAPI仕様書
+    ## エラーレスポンス
+    - 400: バリデーションエラー
+    - 401: 認証エラー
+    - 403: 権限エラー
+    - 404: リソースが見つからない
+    - 422: バリデーションエラー（詳細）
+    - 500: サーバーエラー
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api
+    description: 開発環境
+    
+tags:
+  - name: 認証
+    description:  ユーザ認証関連
+  - name: ユーザ管理
+    description: ユーザ情報管理
+  - name: 投稿管理
+    description: 投稿の作成・取得・削除
+  - name: コメント管理
+    description: コメントの作成・取得・削除
+
+## エンドポイント
+paths:
+
+  ## 認証API
+  /auth/login:
+    post:
+      tags:
+        - 認証
+      summary: ログイン
+      description: ユーザーＩＤとパスワードでログインし、認証トークンを取得
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              required:
+                - loginID
+                - password
+              properties:
+                loginID:
+                  type: string
+                  example: tanaka123
+                password:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: 1|abc123def456...
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: ログイン失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /auth/logout:
+    post:
+      tags:
+        - 認証
+      summary: ログアウト
+      description: 現在の認証トークンを無効化
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ログアウト成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: ログアウトしました
+                    
+  /auth/user:
+    get:
+      tags:
+        - 認証
+      summary: 認証情報取得成功
+      description: 現在ログイン中のユーザー方法取得
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ユーザー情報取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+
+  ## ユーザー管理API
+  /users/register:
+    post:
+      tags:
+        - ユーザ管理
+      summary: ユーザ新規登録
+      description: 新しいユーザを登録する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - loginID
+                - password
+                - password_confirmation
+              properties:
+                name:
+                  type: string
+                  example: 田中太郎
+                loginID:
+                  type: string
+                  example: tanaka123
+                password:
+                  type: string
+                  format: password
+                  example: password123
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: ユーザー登録が完了しました
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    example: 1|abc234def567...
+        '422':
+          $ref: '#/components/responses/ValidationError'
+          
+  /users/profile:
+    put:
+      tags:
+        - ユーザ管理
+      summary: プロフィール更新
+      description: ユーザ名、パスワードの変更
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 12
+                  example: 畑中太郎
+                password:
+                  type: string
+                  format: password
+                  example: newpassword456
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: newpassword456
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: プロフィールを更新しました
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+          
+  /users/{user_id}:
+    get:
+      tags:
+        - ユーザ管理
+      summary: ユーザ情報取得
+      description: 指定されたユーザの情報を取得
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: ユーザ情報取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  
+  ##投稿管理API
+  /posts:
+    get:
+      tags:
+        - 投稿管理
+      summary: 全体の投稿一覧を取得（無限スクロール対応）
+      description: | 
+        カーソルページネーションによる投稿一覧取得
+        - 全ユーザの投稿を新しい順に取得
+        - 初回リクエスト: cursorパラメータなし
+        - 2回目以降: 初回レスポンスのnext_cursorを使用
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: |
+            ページング用カーソル
+            - 初回リクエストでは省略
+            - 2回目以降は前回レスポンスのnext_cursorを指定
+          schema:
+            type: string
+          example: "eyJpZCI6MTIzLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNVQxMDozMDowMFoifQ=="
+          
+        - name: limit
+          in: query
+          required: false
+          description: "1回のリクエストで取得する件数(default: 10)"
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+          
+      responses:
+        '200':
+          description: 投稿一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+      
+    post:
+      tags:
+        - 投稿管理
+      summary: 新規投稿作成
+      description: 新しい投稿を作成
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - content
+                - image
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  example: 今日もいい天気
+                  description: キャプション
+                image:
+                  type: string
+                  format: binary
+                  description: 投稿画像
+      responses:
+        '201':
+          description:  投稿作成完了
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 投稿しました
+                  post:
+                    $ref: '#/components/schemas/Post'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+          
+  /posts/{post_id}:
+    delete:
+      tags:
+        - 投稿管理
+      summary: 投稿削除
+      description: 指定された投稿を削除（投稿者のみ可）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 削除可能
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 投稿が削除されました
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+          
+  /users/{user_id}/posts:
+    get:
+      tags:
+        - 投稿管理
+      summary: 指定ユーザ投稿一覧
+      description: 指定されたユーザの投稿を新しい順に取得
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+          
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Post'
+                  pagination:    
+                    $ref: '#/components/schemas/Pagination'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+
+
+  ##コメント管理API
+  /posts/{post_id}/comments:
+    parameters:
+      - name: post_id
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 1
+    get:
+      tags:
+        - コメント管理
+      summary: 投稿のコメント一覧を取得
+      description: 指定された投稿のコメントを全件取得
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: コメント一覧取得成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  
+    post:
+      tags:
+        - コメント管理
+      summary: コメント作成
+      description: 指定された投稿にコメントを追加
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  example: 素敵な写真ですね
+      responses:
+        '201':
+          description: コメント追加成功
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: コメントしました
+                  comment:
+                    $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /comments/{comment_id}:
+    delete:
+      tags:
+        - コメント管理
+      summary:  コメントの削除
+      description:  指定したコメントを削除（自分のコメントのみ）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: 削除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: コメントが削除されました
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  
+
+## コンポーネント定義
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          maxLength: 12
+          example: 田中太郎
+        loginID:
+          type: string
+          maxLength: 12
+          example: tanaka123
+        password:
+          type: string
+          minLength: 8
+          maxLength: 36
+          example: password123
+        password_confirmation:
+          type: string
+          minLength: 8
+          maxLength: 36
+          example: password123
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-08-27T10:30:00Z
+        updated_at:
+          type: string
+          format: datetime
+          example: 2025-08-27T10:30:00Z
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        content:
+          type: string
+          example: 今日もいい天気                             
+        image_path:
+          type: string
+          example: uploads/posts/2025/08/27/image123.jpg
+        published_at:
+          type: string
+          format: datetime
+          example: 2025-08-27T10:30:00Z
+        deleted_at:
+          type: string
+          format: datetime
+          example: 2025-08-27T10:30:00Z
+        comments_count:
+          type: integer
+          example: 5
+        user:
+          $ref: '#/components/schemas/User'
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        post_id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 2
+        content:
+          type: string
+          example: 素敵な写真ですね
+        created_at:
+          type: string
+          format: date-time
+          example: 2025-08-29T10:30:00Z
+        deleted_at:
+          type: string
+          format: date-time
+          example: 2025-08-29T10:30:00Z
+        user:
+          $ref: '#/components/schemas/User'
+
+    Pagination:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+          description: さらにデータが存在するか
+          example: true
+        next_cursor:
+          type: string
+          description: |
+            次のページ取得用カーソル
+            has_moreがfalseの場合はnull
+          example: "eyJpZCI6MTAwLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNFQxNTozMDowMFoifQ=="
+        prev_cursor:
+          type: string
+          description: |
+            前のページ取得用カーソル
+          example: "eyJpZCI6MTQwLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNlQwOTozMDowMFoifQ=="
+        count:
+          type: integer
+          description: 今回のレスポンスに含まれる件数
+          example: 10
+  
+    Meta:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: レスポンス生成時刻
+          example: "2024-01-15T10:30:00Z"
+        request_id:
+          type: string
+          description: リクエスト追跡用
+          example: "req_abc123"
+  
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: エラーが発生しました
+        errors:
+          type: object
+          nullable: true
+          
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 無効な入力データです
+        errors:
+          type: object
+          properties:
+            name:
+              type: array
+              items:
+                type: string
+              example: ["ユーザ名を正しく入力してください"]
+            loginID:
+              type: array
+              items:
+                type: string
+              example: ["ログインＩＤを正しく入力してください"]
+            password:
+              type: array
+              items:
+                type: string
+              example: ["IDまたはパスワードが間違っています"]
+            password_confirmation:
+              type: array
+              items:
+                type: string
+              example: ["パスワードが一致しません"]
+            content:
+              type: array
+              items:
+                type: string
+              example: ["１～５０文字を入力してください"]
+
+  responses:
+    Unauthorized:
+      description: 認証エラー
+      content: 
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: 認証が必要です
+            
+    Forbidden:
+      description: 権限エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: この操作を実行する権限がありません
+            
+    NotFound:
+      description: 指定されたリソースが見つかりません
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: 指定されたリソースが見つかりません
+            
+    ValidationError:
+      description: バリデーションエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+      
+        
+      
