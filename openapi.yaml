@@ -3,10 +3,10 @@ openapi: 3.0.3
 info:
   title: Instagram風SNSアプリ
   description: |
+    Instagram風アプリmInistagamのAPI仕様書
     ## 認証について
     - JWT/Laravel Sanctumトークンベース認証
     - 認証が必要なエンドポイントは `Authorization: Bearer {token}` ヘッダーが必要
-    Instagram風アプリmInistagamのAPI仕様書
     ## エラーレスポンス
     - 400: バリデーションエラー
     - 401: 認証エラー
@@ -38,7 +38,7 @@ paths:
       tags:
         - 認証
       summary: ログイン
-      description: ユーザーＩＤとパスワードでログインし、認証トークンを取得
+      description: ログインＩＤとパスワードでログインし、認証トークンを取得
       requestBody:
         required: true
         content: 
@@ -46,10 +46,10 @@ paths:
             schema:
               type: object
               required:
-                - loginID
+                - login_id
                 - password
               properties:
-                loginID:
+                login_id:
                   type: string
                   example: tanaka123
                 password:
@@ -64,17 +64,28 @@ paths:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: ログインが完了しました
                   token:
                     type: string
-                    example: 1|abc123def456...
+                    example: 1|abc123def456ghi789jkl012mno345pqr678stu901vwx234yz
+                  token_type:
+                    type: string
+                    example: Bearer
                   user:
                     $ref: '#/components/schemas/User'
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+              
         '401':
           description: ログイン失敗
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
                 
   /auth/logout:
     post:
@@ -95,13 +106,17 @@ paths:
                   message:
                     type: string
                     example: ログアウトしました
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
                     
   /auth/user:
     get:
       tags:
         - 認証
       summary: 認証情報取得成功
-      description: 現在ログイン中のユーザー方法取得
+      description: 現在ログイン中のユーザー情報取得
       security:
         - bearerAuth: []
       responses:
@@ -111,8 +126,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
 
-
+                
   ## ユーザー管理API
   /users/register:
     post:
@@ -130,7 +149,6 @@ paths:
                 - name
                 - loginID
                 - password
-                - password_confirmation
               properties:
                 name:
                   type: string
@@ -139,10 +157,6 @@ paths:
                   type: string
                   example: tanaka123
                 password:
-                  type: string
-                  format: password
-                  example: password123
-                password_confirmation:
                   type: string
                   format: password
                   example: password123
@@ -157,13 +171,10 @@ paths:
                   message:
                     type: string
                     example: ユーザー登録が完了しました
-                  user:
-                    $ref: '#/components/schemas/User'
-                  token:
-                    type: string
-                    example: 1|abc234def567...
         '422':
           $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
           
   /users/profile:
     put:
@@ -187,10 +198,6 @@ paths:
                   type: string
                   format: password
                   example: newpassword456
-                password_confirmation:
-                  type: string
-                  format: password
-                  example: newpassword456
       responses:
         '200':
           description: 更新成功
@@ -208,32 +215,9 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
           
-  /users/{user_id}:
-    get:
-      tags:
-        - ユーザ管理
-      summary: ユーザ情報取得
-      description: 指定されたユーザの情報を取得
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: user_id
-          in: path
-          required: true
-          schema:
-            type: integer
-          example: 1
-      responses:
-        '200':
-          description: ユーザ情報取得成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
   
   ##投稿管理API
   /posts:
@@ -242,28 +226,26 @@ paths:
         - 投稿管理
       summary: 全体の投稿一覧を取得（無限スクロール対応）
       description: | 
-        カーソルページネーションによる投稿一覧取得
-        - 全ユーザの投稿を新しい順に取得
-        - 初回リクエスト: cursorパラメータなし
-        - 2回目以降: 初回レスポンスのnext_cursorを使用
-      security:
-        - bearerAuth: []
+        全ユーザの投稿を新しい順でページネーション取得
+        - Laravel標準のpaginateメソッドを使用
+        - オフセットベース(page番号指定)
+        - デフォルト: 1ページあたり10件
+        - 最大: 1ページ当たり100件
       parameters:
-        - name: cursor
+        - name: page
           in: query
           required: false
-          description: |
-            ページング用カーソル
-            - 初回リクエストでは省略
-            - 2回目以降は前回レスポンスのnext_cursorを指定
+          description: ページ番号（1から開始）
           schema:
-            type: string
-          example: "eyJpZCI6MTIzLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNVQxMDozMDowMFoifQ=="
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
           
-        - name: limit
+        - name: per_page
           in: query
           required: false
-          description: "1回のリクエストで取得する件数(default: 10)"
+          description: "1ページあたりの取得件数"
           schema:
             type: integer
             minimum: 1
@@ -279,6 +261,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  success:
+                    type: boolean
+                    example: true
                   data:
                     type: array
                     items:
@@ -287,6 +272,10 @@ paths:
                     $ref: '#/components/schemas/Pagination'
                   meta:
                     $ref: '#/components/schemas/Meta'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
       
     post:
       tags:
@@ -330,6 +319,10 @@ paths:
                     $ref: '#/components/schemas/Post'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
           
   /posts/{post_id}:
     delete:
@@ -363,15 +356,15 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
           
-  /users/{user_id}/posts:
+  /posts/{user_id}:
     get:
       tags:
         - 投稿管理
       summary: 指定ユーザ投稿一覧
       description: 指定されたユーザの投稿を新しい順に取得
-      security:
-        - bearerAuth: []
       parameters:
         - name: user_id
           in: path
@@ -392,10 +385,16 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Post'
+                  user:
+                      $ref: '#/components/schemas/User'
                   pagination:    
                     $ref: '#/components/schemas/Pagination'
                   meta:
                     $ref: '#/components/schemas/Meta'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
 
 
   ##コメント管理API
@@ -426,10 +425,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Comment'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
   
     post:
       tags:
@@ -471,8 +472,10 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
 
-  /comments/{comment_id}:
+  /posts/{post_id}/comments/{comment_id}:
     delete:
       tags:
         - コメント管理
@@ -481,6 +484,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
         - name: comment_id
           in: path
           required: true
@@ -504,6 +513,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
 
 
   
@@ -528,16 +539,11 @@ components:
           type: string
           maxLength: 12
           example: 田中太郎
-        loginID:
+        login_id:
           type: string
           maxLength: 12
           example: tanaka123
         password:
-          type: string
-          minLength: 8
-          maxLength: 36
-          example: password123
-        password_confirmation:
           type: string
           minLength: 8
           maxLength: 36
@@ -565,8 +571,8 @@ components:
           example: 今日もいい天気                             
         image_path:
           type: string
-          example: uploads/posts/2025/08/27/image123.jpg
-        published_at:
+          example: https/uploads/posts/2025/08/27/image123.jpg
+        created_at:
           type: string
           format: datetime
           example: 2025-08-27T10:30:00Z
@@ -608,26 +614,61 @@ components:
 
     Pagination:
       type: object
+      description: Laravel標準のページネーション情報
       properties:
-        has_more:
-          type: boolean
-          description: さらにデータが存在するか
-          example: true
-        next_cursor:
-          type: string
-          description: |
-            次のページ取得用カーソル
-            has_moreがfalseの場合はnull
-          example: "eyJpZCI6MTAwLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNFQxNTozMDowMFoifQ=="
-        prev_cursor:
-          type: string
-          description: |
-            前のページ取得用カーソル
-          example: "eyJpZCI6MTQwLCJjcmVhdGVkX2F0IjoiMjAyNC0wMS0xNlQwOTozMDowMFoifQ=="
-        count:
+        current_page:
           type: integer
-          description: 今回のレスポンスに含まれる件数
+          description: 現在のページ番号
+          example: 1
+        per_page:
+          type: integer
+          description: 1ページ当たりの件数
+          example: 1
+        total:
+          type: integer
+          description: 全データ件数
+          example: 1000
+        last_page:
+          type: integer
+          description: 最終ページ番号
+          example: 100
+        from:
+          type: integer
+          description: 現在ページの開始位置
+          example: 1
+        to:
+          type: integer
+          nullable: true
+          description: 現在ページの終了位置
           example: 10
+        has_more_pages:
+          type: boolean
+          description: 次のページが存在するか
+          example: true
+        links:
+          type: object
+          description: ページネーションリンク
+          properties:
+            first:
+              type: string
+              nullable: true
+              description: 最初のページのURL
+              example: "https://api.example.com/api/v1/posts?page=1"
+            last:
+              type: string
+              nullable: true
+              description: 最後のページのURL
+              example: "https://api.example.com/api/v1/posts?page=100"
+            prev:
+              type: string
+              nullable: true
+              description: 前のページのURL
+              example: null
+            next:
+              type: string
+              nullable: true
+              description: 次のページのURL
+              example: "https://api.example.com/api/v1/posts?page=2"
   
     Meta:
       type: object
@@ -686,6 +727,16 @@ components:
               items:
                 type: string
               example: ["１～５０文字を入力してください"]
+            page:
+              type: array
+              items:
+                type: string
+              example: ["リクエストパラメータが不正です"]
+            per_page:
+              type: array
+              items:
+                type: string
+              example: ["リクエストパラメータが不正です"]
 
   responses:
     Unauthorized:
@@ -721,7 +772,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ValidationError'
-
-      
-        
-      
+            
+    ServerError:
+      description: サーバーエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: サーバーの応答がありません
