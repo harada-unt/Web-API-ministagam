@@ -1,0 +1,270 @@
+/* ===========================================
+   カスタムCSS
+   ========================================== */
+
+/* CSS変数定義 */
+:root {
+    --instagram-blue: #1877f2;
+    --instagram-gradient: linear-gradient(45deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d);
+    --border-color: #dbdbdb;
+    --text-secondary: #8e8e8e;
+    --bg-primary: #fafafa;
+    --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --border-radius: 8px;
+}
+
+/* 全体のフォント設定 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-primary);
+    line-height: 1.6;
+}
+
+/* ヘッダー（ナビゲーションバー）のスタイリング */
+.navbar {
+    box-shadow: var(--shadow-light);
+    background-color: white !important;
+    padding: 0.75rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #262626 !important;
+    text-decoration: none;
+}
+
+.navbar-brand:hover {
+    color: var(--instagram-blue) !important;
+}
+
+/* ボタンスタイリング */
+.btn-primary {
+    background: var(--instagram-blue);
+    border-color: var(--instagram-blue);
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 16px;
+}
+
+.btn-primary:hover {
+    background: #166fe5;
+    border-color: #166fe5;
+}
+
+.btn-outline-primary {
+    color: var(--instagram-blue);
+    border-color: var(--instagram-blue);
+    font-weight: 600;
+}
+
+/* 投稿カードスタイリング */
+.post-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-light);
+    overflow: hidden;
+}
+
+.post-header {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #efefef;
+}
+
+.post-username {
+    font-weight: 600;
+    color: #262626;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.post-username:hover {
+    text-decoration: underline;
+    color: #262626;
+}
+
+.post-date {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.post-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 600px;
+    object-fit: cover;
+}
+
+.post-content {
+    padding: 1rem;
+}
+
+.post-text {
+    margin: 0;
+    color: #262626;
+    line-height: 1.5;
+}
+
+.post-actions {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #efefef;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.post-actions .btn {
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 0.25rem 0.5rem;
+}
+
+.post-actions .btn:hover {
+    color: #262626;
+}
+
+.post-actions .btn i {
+    margin-right: 0.25rem;
+}
+
+/* コメント数表示 */
+.comments-count {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.comments-count:hover {
+    color: #262626;
+    text-decoration: underline;
+}
+
+/* モーダルスタイリング */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--shadow-medium);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.25rem;
+}
+
+/* フォーム要素 */
+.form-control:focus {
+    border-color: var(--instagram-blue);
+    box-shadow: 0 0 0 0.2rem rgba(24, 119, 242, 0.25);
+}
+
+textarea.form-control {
+    resize: none;
+    border-radius: 6px;
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* カード登場アニメーション */
+.post-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* ホバーエフェクト */
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--shadow-medium);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 0;
+        padding-right: 0;
+    }
+    
+    .post-card {
+        margin-bottom: 1rem;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .post-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .post-content {
+        padding: 0.75rem 1rem;
+    }
+    
+    .post-actions {
+        padding: 0.5rem 1rem 0.75rem;
+    }
+    
+    /* モバイルでfooterの分、下部にスペース確保 */
+    body {
+        padding-bottom: 80px;
+    }
+    
+    /* デスクトップでfooter非表示 */
+    @media (min-width: 768px) {
+        .fixed-bottom {
+            display: none !important;
+        }
+        
+        body {
+            padding-bottom: 0;
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .post-avatar {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .navbar-brand {
+        font-size: 1.5rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
