@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('アプリケーション開始');
 
     function bindEventListeners() {
         // ヘッダーボタン
@@ -51,14 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = 'index.html';
             });
         }
-    
-        // プロフィールボタン
-        const profileBtn = document.getElementById('profileBtn');
-        if (profileBtn) {
-            profileBtn.addEventListener('click', function() {
-                window.location.href = 'profile.html';
-            });
-        }
     }
     
     
@@ -94,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+
     /**
      * 認証状態のUI表示
      */
@@ -111,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('commentForm').classList.remove('d-none')
     }
     
+    
     /**
      * 非認証状態のUI表示
      */
@@ -118,16 +111,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // ヘッダーの表示切替
         document.getElementById('authButtons').classList.remove('d-none');
     
-        // test
-        // document.getElementById('authButtons').classList.add('d-none');
-        // document.getElementById('userNameDisplay').textContent = "user.username";
-    
         // フッターのボタンを非表示
-        // document.getElementById('postBtn').classList.add('d-none');
-        // document.getElementById('profileBtn').classList.add('d-none');
+        document.getElementById('postBtn').classList.add('d-none');
+        document.getElementById('profileBtn').classList.add('d-none');
     
         // コメントモーダルの入力フォームを非表示
-        document.getElementById('commentForm').classList.add('d-none')
+        // document.getElementById('commentForm').classList.add('d-none')
     }
 
     bindEventListeners();

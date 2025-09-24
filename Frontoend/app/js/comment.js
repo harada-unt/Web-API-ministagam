@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const createCommentBtn = document.getElementById('createCommentBtn');
         if (createCommentBtn) {
             createCommentBtn.addEventListener('click', function() {
-                createComment();
+                const postId = createCommentBtn.dataset.postId;
+                createComment(postId);
             });
         }
 
@@ -31,8 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
         }
     }
-
-    // TODO: コメント削除ボタンの追加
 
 
     // コメント一覧を取得し表示する
@@ -55,7 +54,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // コメントデータが存在しない場合の処理
             if (comments.length === 0) {
-                commentsContainer.innerHTML = '<p>コメントがありません。</p>';
+                commentsContainer.innerHTML = `
+                    <div class="text-center py-5" id="nocommentsMessage">
+                        <i class="bi bi-chat display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">まだコメントがありません</h4>
+                        <p class="text-muted">コメントデータをがありません</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -63,36 +68,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 const commentElement = document.createElement('div');
                 commentElement.classList.add('comment-card border-bottom mb-3');
                 commentElement.innerHTML = `
-                <div class="comment-card border-bottom mb-3">
-                    <div class="card-header d-flex">
-                        <div class="me-auto p-2">${comment.user.name}</div>
-                        <div class="p-2">${comment.created_at}</div>
-                    </div>                  
-                    <div class="card-body">
-                        <p class="card-text">${comment.content}</p>
+                    <div class="comment-card border-bottom mb-3">
+                        <div class="card-header d-flex">
+                            <div class="me-auto p-2">${comment.user.name}</div>
+                            <div class="p-2">${comment.created_at}</div>
+                            <button type="button" id="deleteCommentBtn" class="btn btn-danger d-none" data-comment-id="${comment.id}" data-post-id${comment.post.id}>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>                  
+                        <div class="card-body">
+                            <p class="card-text">${comment.content}</p>
+                        </div>
                     </div>
-                </div>
+
+                    <form id="commentForm" class="d-none">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="commentContent" rows="3" placeholder="コメントする" maxlength="100" required></textarea>
+                        </div>
+                        <div class="modal-footer">    
+                            <button type="button" class="btn btn-secondary d-flex justify-content-end" data-bs-dismiss="modal">キャンセル</button>
+                            <button type="button" id="createCommentBtn" class="btn btn-primary d-flex justify-content-end" data-post-id="${comment.post.id}>コメント</button>
+                        </div>
+                    </form>
                 `;
+
+
+                // 認証済みユーザーの場合のみ、コメント投稿フォームを表示する
+                displayCommentForm();
+
+
+                // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
+                displayDeleteBtn(comment.user.id);
                 commentsContainer.appendChild(commentElement);
             })
         } catch (error) {
-            // TODO: エラーメッセージの表示
-            console.error('コメントの取得に失敗しました:', error);
-
-            // test
+            // エラーメッセージの表示
             const commentsContainer = document.getElementById('commentsContainer');
-            commentsContainer.innerHTML = '<p>コメントがありません。</p>';
+            commentsContainer.innerHTML =  `
+                <div class="text-center py-5" id="nocommentsMessage">
+                    <i class="bi bi-chat display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">まだコメントがありません</h4>
+                    <p class="text-muted">コメントデータをがありません</p>
+                </div>
+            `;
         }
     }
 
 
     // コメントを投稿する
-    // TODO: postIdはモーダルを開いたときに設定されたdata属性から取得する
-    async function createComment() {
+    async function createComment(postId) {
         const token = localStorage.getItem('authToken');
         
         if (token) {
-            const postId = document.getElementById('createCommentBtn').dataset.postId;
             const content = document.getElementById('commentContent').value;
 
             try {
@@ -120,6 +147,65 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('コメントの投稿に失敗しました:', error);
                 alert('コメントの投稿に失敗しました。');
                 
+            }
+        }
+    }
+
+
+    // 認証済みユーザーの場合のみ、コメント投稿フォームを表示する
+    async function displayCommentForm() {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const url = 'http://localhost:8000/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const commentForm = document.getElementById('commentForm');
+                    if (commentForm) {
+                        commentForm.classList.remove('d-none');
+                    }
+                } else {
+                    console.log('認証トークンが一致しません。');
+                }
+            } catch (error) {
+                console.error('認証ユーザーの取得に失敗しました:', error);
+            }
+        }
+    }
+
+
+    // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
+    async function displayDeleteBtn(commentUserId) {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const url = 'http://localhost:8000/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const authUser = await response.json();
+                    if (authUser.id === commentUserId) {
+                        const deleteCommentBtn = document.getElementById('deleteCommentBtn');
+                        if (deleteCommentBtn) {
+                            deleteCommentBtn.classList.remove('d-none');
+                            deleteCommentBtn.dataset.postId = commentUserId; // 投稿IDをデータ属性に設定
+                        }
+                    }
+                } else {
+                    console.log('認証ユーザーの取得に失敗しました。');
+                }
+            } catch (error) {
+                console.error('認証ユーザーの取得に失敗しました:', error);
             }
         }
     }
@@ -153,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (error) {
                 console.error('コメントの削除に失敗しました:', error);
-             alert('コメントの削除に失敗しました。');
+                alert('コメントの削除に失敗しました。');
             }
         }
     }

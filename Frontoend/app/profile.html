@@ -53,7 +53,9 @@
 
         <section>
             <!-- ユーザータイムライン -->
+
             <article class="d-flex justify-content-center mb-5">
+                <!-- 画面表示確認用 -->
               <div class="post-card" style="width: 35rem;">
                 <div class="card-header d-flex">
                     <div class="me-auto p-2"><a id="userName">ユーザー名</a></div>
@@ -69,22 +71,11 @@
                 </div>
               </div>
             </article>
-            <article class="d-flex justify-content-center">
-                <div class="post-card" style="width: 35rem;">
-                  <div class="card-header d-flex">
-                      <div class="me-auto p-2">ユーザー名</div>
-                      <div class="p-2">投稿日</div>
-                  </div>                  
-                  <img src="イメージ画像のアイコン素材 2.png" class="card-img-top" alt="投稿画像">
-                  <div class="card-body">
-                    <p class="card-text">キャプションの内容がここに入ります。キャプションの内容がここに入ります。キャプションの内容がここに入ります。</p>
-                  </div>
-                  <div  class="d-flex justify-content-end">
-                      <!-- コメント数を表示し、クリックでコメント一覧を表示 -->
-                      <a class="card-link" data-bs-toggle="modal" data-bs-target="#commentModal">コメント件数</a>
-                  </div>
-                </div>
-              </article>
+
+            <article id="postsContainer" class="d-flex justify-content-center">
+                <!-- 動的に投稿を生成 -->
+            </article>
+
         </section>
         
         <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
@@ -94,7 +85,9 @@
     
                     <div class="modal-body">
                         <!-- コメント一覧 -->
+                         
                         <div class="comment-card border-bottom mb-3">
+                            <!-- 表示確認用コメント -->
                             <div class="card-header d-flex ">
                                 <div class="me-auto p-2">ユーザー名</div>
                                 <div class="p-2">投稿日</div>
@@ -103,30 +96,10 @@
                               <p class="card-text">コメントの内容がここに入ります。コメントの内容がここに入ります。コメントの内容がここに入ります。</p>
                             </div>
                         </div>
-    
-                        <div class="comment-card border-bottom mb-3">
-                            <div class="card-header d-flex">
-                                <div class="me-auto p-2">ユーザー名</div>
-                                <div class="p-2">投稿日</div>
-                            </div>                  
-                            <div class="card-body">
-                              <p class="card-text">コメントの内容がここに入ります。コメントの内容がここに入ります。コメントの内容がここに入ります。</p>
-                            </div>
-                          </div>
-    
-                        <!-- コメント入力フォーム -->
-                        <!-- TODO: ログイン時にのみ表示 -->
-                        <form id="commentForm">
-                            <div class="mb-3">
-                                <textarea class="form-control" id="postContent" rows="3" placeholder="コメントする" maxlength="100" required></textarea>
-                            </div>
-                        </form>
-                    </div>
-    
-                    <div class="modal-footer">    
-                        <button type="button" class="btn btn-secondary d-flex justify-content-end" data-bs-dismiss="modal">キャンセル</button>
-                        <button type="button" class="btn btn-primary d-flex justify-content-end">コメント</button>
-                    </div>   
+
+                        <div id="commentsContainer" class="comment-card border-bottom mb-3">
+                            <!-- 動的にコメントを生成 -->
+                        </div>
                 </div>
             </div>
         </div>

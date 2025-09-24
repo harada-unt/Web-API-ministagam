@@ -11,7 +11,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 getUserPosts(userId);
             });
         }
+
+        // プロフィールボタン
+        const profileBtn = document.getElementById('profileBtn');
+        if (profileBtn) {
+            profileBtn.addEventListener('click', function() {
+                const userId = getUserId();
+
+                if (!userId) {
+                    window.location.href = `profile.html?userId=${userId}`;
+                    getUserPosts(userId);
+                } else {
+                    alert('ログインが必要です。');
+                    window.location.href = 'login.html';
+                }
+            })
+        }
     }
+
 
     async function getUserPosts(userId) {
         try {
@@ -25,15 +42,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const postsContainer = document.getElementById('postsContainer');
             postsContainer.innerHTML = ''; // 既存の投稿をクリア
 
-            // コンテナが存在しない場合の安全対策   
-            if (!postsContainer) {
-                console.error('postsContainerが見つかりません');
-                return;
-            }
-
             // 投稿データが存在しない場合の処理
             if (posts.length === 0) {
-                postsContainer.innerHTML = '<p>投稿がありません。</p>';
+                postsContainer.innerHTML = `
+                    <div class="text-center py-5" id="noPostsMessage">
+                        <i class="bi bi-camera display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">まだ投稿がありません</h4>
+                        <p class="text-muted">投稿データをがありません</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -44,12 +61,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 postElement.innerHTML = `
                 <div class="post-card" style="width: 35rem;">
                     <div class="card-header d-flex">
-                        <div class="me-auto p-2"><a id="userName" data-user-id="${post.user.id}">${post.user.name}</a></div>
-                        <div class="p-2">${post.created_at}</div>
-                    </div>                  
+                            <div class="me-auto p-2"><a id="userName" data-user-id="${post.user.id}">
+                                ${post.user.name}
+                            </a>
+                        </div>
+                        <div class="p-2">
+                            ${post.created_at}
+                        </div>
+                    </div>
+
                     <img src="${post.image_path}" class="card-img-top" alt="投稿画像">
+
                     <div class="card-body">
-                    <p class="card-text">${post.content}</p>
+                        <p class="card-text">${post.content}</p>
                     </div>
                     <div class="d-flex justify-content-end">
                         <a id="commentCount" class="card-link comment-link" data-bs-toggle="modal" data-bs-target="#commentModal" data-post-id="${post.id}">
@@ -61,8 +85,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 postsContainer.appendChild(postElement);
             });
         } catch (error) {
+            // エラーメッセージの表示
             console.error('投稿の取得に失敗しました:', error);
-            alert('投稿の取得に失敗しました。');
+
+            const postsContainer = document.getElementById('postsContainer');
+            postsContainer.innerHTML = `
+                <div class="text-center py-5" id="noPostsMessage">
+                    <i class="bi bi-camera display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">まだ投稿がありません</h4>
+                    <p class="text-muted">投稿データを読み込めませんでした</p>
+                </div>
+            `;
+            return;
+        }
+    }
+
+
+    // 認証状態を確認してuserIdを取得
+    async function getUserId() {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const url = 'http://localhost:8000/api/v1/auth/user';
+                const response = await fetch(url);
+                if (response.ok) {
+                    const user = await response.json();
+                    return user.id;
+                } else {
+                    console.log('未認証ユーザー');
+                    return null;
+                }
+            } catch (error) {
+                console.error('ユーザー情報の取得に失敗しました:', error);
+                return null;
+            }
+        } else {
+            console.log('トークンが存在しません。未認証ユーザーとして扱います。');
+            return null;
         }
     }
 

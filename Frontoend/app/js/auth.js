@@ -26,17 +26,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ログインIDとパスワードを使用して、ログインする。ログイン成功時に生成されたBearerトークンをローカルストレージに保存する。
     async function authLogin() {
+        console.log('ログイン処理開始');
+
+        // フォームからログインIDとパスワードを取得
         const loginId = document.getElementById('loginId').value;
         const password = document.getElementById('password').value;
 
         // TODO: バリデーション
-        // 空欄チェック
-        // 桁数チェック
+        // 必須チェック
 
-        if (!loginId || !password) {
-            alert('ログインIDとパスワードを入力してください。');
-            return;
-        }
+
+        // 桁数チェック
+       
 
         try {
             const url = 'http://localhost:8000/api/v1/auth/login';
@@ -67,8 +68,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ログ
-    アウト
+    // ログアウト
     async function authLogout() {
         // 本当にログアウトするか確認
         alert('ログアウトしますか？');
@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
     }
+
 
     bindEventListeners();
 });

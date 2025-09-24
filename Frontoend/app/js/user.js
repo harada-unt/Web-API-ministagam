@@ -31,10 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         // TODO: バリデーション
-        if (password !== passwordConfirm) {
-            alert('パスワードと確認用パスワードが一致しません。');
-            return;
-        }
 
         const formData = new FormData();
         formData.append('userName', userName);

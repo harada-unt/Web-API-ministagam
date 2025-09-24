@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // TODO: 投稿削除ボタン: 自分がログインしているならトークンから認証済みユーザーを特定し、認証済みuserIDと投稿のuserIDが一致した場合のみボタンを表示する
-
 
     // 投稿を取得し表示する
     async function getPosts() {
@@ -40,15 +38,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const postsContainer = document.getElementById('postsContainer');
             postsContainer.innerHTML = ''; // 既存の投稿をクリア
 
-            // コンテナが存在しない場合の安全対策
-            if (!postsContainer) {
-                console.error('postContentが見つかりません');
-                return;
-            }
-
             // 投稿データが存在しない場合の処理
             if (posts.length === 0) {
-                postsContainer.innerHTML = '<p>投稿がありません。</p>';
+                postsContainer.innerHTML = `
+                    <div class="text-center py-5" id="noPostsMessage">
+                        <i class="bi bi-camera display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">まだ投稿がありません</h4>
+                        <p class="text-muted">投稿データをがありません</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -59,13 +57,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 postElement.innerHTML = `
                 <div class="post-card" style="width: 35rem;">
                     <div class="card-header d-flex">
-                        <div class="me-auto p-2"><a id="userName" data-user-id="${post.user.id}">${post.user.name}</a></div>
-                        <div class="p-2">${post.created_at}</div>
-                    </div>                  
-                    <img src="${post.image_path}" class="card-img-top" alt="投稿画像">
-                    <div class="card-body">
-                    <p class="card-text">${post.content}</p>
+                        <div class="me-auto p-2">
+                            <a id="userName" data-user-id="${post.user.id}">
+                                ${post.user.name}
+                            </a>
+                        </div>
+                        <div class="p-2">
+                            ${post.created_at}
+                        </div>
+                        <button type="button" id="deletePostBtn" class="btn btn-danger d-none" >
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
+
+                    <img src="${post.image_path}" class="card-img-top" alt="投稿画像">
+
+                    <div class="card-body">
+                        <p class="card-text">${post.content}</p>
+                    </div>
+
                     <div class="d-flex justify-content-end">
                         <a id="commentCount" class="card-link comment-link" data-bs-toggle="modal" data-bs-target="#commentModal" data-post-id="${post.id}">
                             コメント${post.comments_count}件
@@ -73,15 +83,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 `;
+
+                // 投稿のユーザーIDが一致する時のみ、削除ボタンを表示                
+                displayDeleteBtn(post.user.id);
+                
                 postsContainer.appendChild(postElement);
             });
         } catch (error) {
-            // TODO: エラーメッセージの表示
+            // エラーメッセージの表示
             console.error('投稿の取得に失敗しました:', error);
 
-            // test
             const postsContainer = document.getElementById('postsContainer');
-            postsContainer.innerHTML = '<p>投稿データを読み込めませんでした</p>';
+            postsContainer.innerHTML = `
+                <div class="text-center py-5" id="noPostsMessage">
+                    <i class="bi bi-camera display-1 text-muted"></i>
+                    <h4 class="text-muted mt-3">まだ投稿がありません</h4>
+                    <p class="text-muted">投稿データを読み込めませんでした</p>
+                </div>
+            `;
             return;
         }
     }
@@ -133,11 +152,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
+    // 投稿のユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
+    async function displayDeleteBtn(postUserId) {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const url = 'http://localhost:8000/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const authUser = await response.json();
+                    if (authUser.id === postUserId) {
+                        const deletePostBtn = document.getElementById('deletePostBtn');
+                        if (deletePostBtn) {
+                            deletePostBtn.classList.remove('d-none');
+                            deletePostBtn.dataset.postId = postUserId; // 投稿IDをデータ属性に設定
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('認証ユーザーの取得に失敗しました:', error);
+            }
+        }
+    }
+
+
     // 投稿データの削除
     async function deletePost() {
         const token = localStorage.getItem('authToken');
         if (token) {
             const postId = document.getElementById('deletePostBtn').dataset.postId;
+
 
             try {
                 const url = `http://localhost:8000/api/v1/posts/${postId}`;
@@ -165,8 +215,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
     }
+
         
     bindEventListeners();
     getPosts();
-    checkAuthStatus();
 });
