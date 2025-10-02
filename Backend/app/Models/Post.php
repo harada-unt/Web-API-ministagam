@@ -12,6 +12,7 @@ class Post extends Model
         'user_id',
         'content',
         'image_path',
+        'comment_count',
     ];
 
     protected $casts = [
@@ -32,17 +33,5 @@ class Post extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    /**
-     * コメント数更新
-     */
-    public function incrementComments()
-    {
-        $this->increment('comments_count');
-    }
-    public function decrementComments()
-    {
-        $this->decrement('comments_count');
     }
 }

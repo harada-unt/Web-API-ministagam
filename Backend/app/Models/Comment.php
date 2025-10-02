@@ -34,8 +34,4 @@ class Comment extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    /**
-     * コメント作成時に投稿のコメント数を更新
-     */
 }

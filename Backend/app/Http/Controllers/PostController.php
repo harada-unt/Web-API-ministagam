@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Storage;
 use Exception;
+
 
 class PostController extends Controller
 {
@@ -17,7 +19,6 @@ class PostController extends Controller
     public function getPost() {
         try {
             $posts = Post::with('user:id,name')
-                ->where('deleted_at', null)
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
@@ -61,7 +62,15 @@ class PostController extends Controller
         try {
             $validated = $request->validate([
                 'content' => 'required|max:50',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+            ], [
+                'conten.required' => '投稿本文は必須です。',
+                'content.max' => '投稿本文は50文字以内で入力してください。',
+                'image.required' => '画像ファイルを選択してください。',
+                'image.image' => '画像ファイルを選択してください。',
+                'image.mimes' => '画像ファイルはjpg, jpeg, png, gif形式である必要があります。',
+                'image.max' => '画像ファイルは5MB以内である必要があります。',
+
             ]);
 
             $user = auth()->user();
@@ -91,27 +100,37 @@ class PostController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function deletePost($post_id) {
+        DB::beginTransaction();
+        try {
+            $post = Post::find($post_id);
+            if (!$post) {
+                return response()->json([
+                    'message' => '投稿が見つかりません。'
+                ], Response::HTTP_NOT_FOUND);
+            }
 
-        $post = Post::find($post_id);
-        if (!$post) {
+            $user = auth()->user();
+            if ($post->user_id !== $user->id) {
+                return response()->json([
+                    'message' => '自分の投稿のみ削除できます。',
+                ], Response::HTTP_FORBIDDEN);
+            }
+
+            Storage::disk('public')->delete($post->image_path);
+            $post->comments()->delete();
+            $post->delete();
+
+            DB::commit();
+
             return response()->json([
-                'message' => '投稿が見つかりません。'
-            ], Response::HTTP_NOT_FOUND);
-        }
-
-        $user = auth()->user();
-        if ($post->user_id !== $user->id) {
+                "status" => 'success',
+                'message' => '投稿を削除しました。'
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            DB::rollBack();
             return response()->json([
-                'message' => '自分の投稿のみ削除できます。',
-            ], Response::HTTP_FORBIDDEN);
-        }
-
-        Storage::disk('public')->delete($post->image_path);
-        $post->delete();
-
-        return response()->json([
-            "status" => 'success',
-            'message' => '投稿を削除しました。'
-        ], Response::HTTP_OK);
+                'message' => '投稿の作成に失敗しました。'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        };
     }
 }

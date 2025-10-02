@@ -7,14 +7,14 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Symfony\Component\HttpFoundation\Response;
 
-class ChageProfileRequest extends FormRequest
+class ChangeProfileRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -25,9 +25,19 @@ class ChageProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['string', 'max: 12'],
-            'password' => ['string', 'min: 8', 'max: 36'],
+            'name' => ['nullable', 'string', 'max: 12'],
+            'password' => ['nullable', 'string', 'min: 8', 'max: 36'],
         ];
+    }
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // nameとpasswordが両方とも未入力の場合のみエラー
+            if (!$this->filled('name') && !$this->filled('password')) {
+                $validator->errors()->add('name', 'nameまたはpasswordのいずれかは入力必須です。');
+                $validator->errors()->add('password', 'nameまたはpasswordのいずれかは入力必須です。');
+            }
+        });
     }
 
     public function messages(): array
@@ -38,6 +48,7 @@ class ChageProfileRequest extends FormRequest
             'password.max' => 'パスワードは8~36文字以内で入力してください。',
         ];
     }
+
 
     protected function failedValidation(Validator $validator)
     {
