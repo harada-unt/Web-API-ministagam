@@ -10,8 +10,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const createCommentBtn = document.getElementById('createCommentBtn');
         if (createCommentBtn) {
             createCommentBtn.addEventListener('click', function() {
-                const postId = createCommentBtn.dataset.postId;
-                createComment(postId);
+                const modal = document.getElementById('commentModal');
+                const post_id = modal ? modal.dataset.currentPostId : null;
+                if (post_id) {
+                    createComment(post_id);
+                } else {
+                    alert('投稿IDが取得できません。');
+                }
             });
         }
 
@@ -24,25 +29,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // コメント件数をクリックするとコメント一覧取得
-        const commentCount = document.getElementById('commentCount');
-        if (commentCount) {
-            commentCount.addEventListener('click', function() {
-                const postId = commentCount.dataset.postId;
-                getComments(postId);
-            })
-        }
-    }
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('.comment-link');
+            
+            if (link) {
+                const post_id = link.dataset.postId;
+                
+                // モーダルに投稿IDを保存
+                const modal = document.getElementById('commentModal');
+                if (modal) {
+                    modal.dataset.currentPostId = post_id;
+                }
+                
+                // コメント一覧を取得
+                getComments(post_id);
+            }
+        });
+    };
 
 
     // コメント一覧を取得し表示する
-    async function getComments(postId) {
+    async function getComments(post_id) {
+
+        // 日付フォーマット関数
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+    
+             return `${year}/${month}/${day}`;
+        }
+
         try {
-            const url = `http://localhost:8000/api/v1/posts/${postId}/comments`;
+            const url = `http://localhost:80/api/v1/posts/${post_id}/comments`;
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`レスポンスステータス: ${response.status}`);
             }
+
             const comments = await response.json();
+            const commentsData = comments.data;
             const commentsContainer = document.getElementById('commentsContainer');
             commentsContainer.innerHTML = ''; // 既存のコメントをクリア
             
@@ -53,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // コメントデータが存在しない場合の処理
-            if (comments.length === 0) {
+            if (commentsData.length === 0) {
                 commentsContainer.innerHTML = `
                     <div class="text-center py-5" id="nocommentsMessage">
                         <i class="bi bi-chat display-1 text-muted"></i>
@@ -64,15 +91,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            comments.forEach(comment => {
+            commentsData.forEach(comment => {
                 const commentElement = document.createElement('div');
-                commentElement.classList.add('comment-card border-bottom mb-3');
+                commentElement.classList.add("comment-card", "border-bottom", "mb-3");
                 commentElement.innerHTML = `
                     <div class="comment-card border-bottom mb-3">
                         <div class="card-header d-flex">
                             <div class="me-auto p-2">${comment.user.name}</div>
-                            <div class="p-2">${comment.created_at}</div>
-                            <button type="button" id="deleteCommentBtn" class="btn btn-danger d-none" data-comment-id="${comment.id}" data-post-id${comment.post.id}>
+                            <div class="p-2">${formatDate(comment.created_at)}</div>
+                            <button type="button" id="commentDeleteBtn${comment.id}" class="btn btn-danger d-none">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>                  
@@ -80,29 +107,21 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="card-text">${comment.content}</p>
                         </div>
                     </div>
-
-                    <form id="commentForm" class="d-none">
-                        <div class="mb-3">
-                            <textarea class="form-control" id="commentContent" rows="3" placeholder="コメントする" maxlength="100" required></textarea>
-                        </div>
-                        <div class="modal-footer">    
-                            <button type="button" class="btn btn-secondary d-flex justify-content-end" data-bs-dismiss="modal">キャンセル</button>
-                            <button type="button" id="createCommentBtn" class="btn btn-primary d-flex justify-content-end" data-post-id="${comment.post.id}>コメント</button>
-                        </div>
-                    </form>
                 `;
 
 
-                // 認証済みユーザーの場合のみ、コメント投稿フォームを表示する
-                displayCommentForm();
-
+                commentElement.querySelector(`#commentDeleteBtn${comment.id}`).addEventListener('click', function() {
+                    deleteComment(comment.post_id, comment.id);
+                });
 
                 // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
-                displayDeleteBtn(comment.user.id);
+                displayDeleteBtn(comment.user_id, comment.id);
                 commentsContainer.appendChild(commentElement);
-            })
+            });
+
         } catch (error) {
             // エラーメッセージの表示
+            console.error('コメントの取得に失敗しました:', error);
             const commentsContainer = document.getElementById('commentsContainer');
             commentsContainer.innerHTML =  `
                 <div class="text-center py-5" id="nocommentsMessage">
@@ -123,11 +142,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const content = document.getElementById('commentContent').value;
 
             try {
-                const url = `http://localhost:8000/api/v1/posts/${postId}/comments`;
+                const url = `http://localhost:80/api/v1/posts/${postId}/comments`;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ content })
                 });
@@ -135,8 +155,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.ok) {
                     // コメント投稿成功時の処理
                     alert('コメントの投稿が完了しました。');
-                    // コメント一覧を再取得して表示
-                    getComments(postId);
+                    window.location.reload();
+
                     // 入力フォームをクリア
                     document.getElementById('commentContent').value = '';                
                 } else {
@@ -144,47 +164,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(`コメントの投稿に失敗しました: ${errorData.message}`);
                 }
             } catch (error) {
-                console.error('コメントの投稿に失敗しました:', error);
-                alert('コメントの投稿に失敗しました。');
+                console.error('サーバーエラーが発生しました。:', error);
+                alert('コメントに失敗しました。');
                 
             }
         }
     }
 
-
-    // 認証済みユーザーの場合のみ、コメント投稿フォームを表示する
-    async function displayCommentForm() {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            try {
-                const url = 'http://localhost:8000/api/v1/auth/user';
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const commentForm = document.getElementById('commentForm');
-                    if (commentForm) {
-                        commentForm.classList.remove('d-none');
-                    }
-                } else {
-                    console.log('認証トークンが一致しません。');
-                }
-            } catch (error) {
-                console.error('認証ユーザーの取得に失敗しました:', error);
-            }
-        }
-    }
-
-
     // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
-    async function displayDeleteBtn(commentUserId) {
+    async function displayDeleteBtn(commentUserId, commentId) {
         const token = localStorage.getItem('authToken');
         if (token) {
             try {
-                const url = 'http://localhost:8000/api/v1/auth/user';
+                const url = 'http://localhost:80/api/v1/auth/user';
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -193,12 +185,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (response.ok) {
-                    const authUser = await response.json();
-                    if (authUser.id === commentUserId) {
-                        const deleteCommentBtn = document.getElementById('deleteCommentBtn');
-                        if (deleteCommentBtn) {
-                            deleteCommentBtn.classList.remove('d-none');
-                            deleteCommentBtn.dataset.postId = commentUserId; // 投稿IDをデータ属性に設定
+                    const user = await response.json();
+                    const authUser = user.data.user.id;
+                    console.log(authUser, commentUserId);
+                    if (authUser === commentUserId) {
+                        const commentDeleteBtn = document.getElementById(`commentDeleteBtn${commentId}`);
+                        if (commentDeleteBtn) {
+                            commentDeleteBtn.classList.remove('d-none');
+                            commentDeleteBtn.dataset.postId = commentUserId; // 投稿IDをデータ属性に設定
                         }
                     }
                 } else {
@@ -212,34 +206,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // コメントを削除する
-    async function deleteComment() {
-        const token = localStorage.getItem('authToken');
-        
-        if (token) {
-            const postId = document.getElementById('deleteCommentBtn').dataset.postId;
-            const commentId = document.getElementById('deleteCommentBtn').dataset.commentId;
+    async function deleteComment(post_id, comment_id) {
+        alert('このコメントを削除しますか？');
+        if (true) {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                try {
+                    const url = `http://localhost:80/api/v1/posts/${post_id}/comments/${comment_id}`;
+                    const response = await fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
 
-            try {
-                const url = `http://localhost:8000/api/v1/posts/${postId}/comments/${commentId}`;
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                    if (response.ok) {
+                        // コメント削除成功時の処理
+                        alert('コメントの削除が完了しました。');
+                        window.location.reload();           
+                    } else {
+                        const errorData = await response.json();
+                        alert(`コメントの削除に失敗しました: ${errorData.message}`);
                     }
-                });
-
-                if (response.ok) {
-                    // コメント削除成功時の処理
-                    alert('コメントの削除が完了しました。');
-                    // コメント一覧を再取得して表示
-                    getComments(postId);             
-                } else {
-                    const errorData = await response.json();
-                    alert(`コメントの削除に失敗しました: ${errorData.message}`);
+                } catch (error) {
+                    console.error('コメントの削除に失敗しました:', error);
+                    alert('コメントの削除に失敗しました。');
                 }
-            } catch (error) {
-                console.error('コメントの削除に失敗しました:', error);
-                alert('コメントの削除に失敗しました。');
             }
         }
     }

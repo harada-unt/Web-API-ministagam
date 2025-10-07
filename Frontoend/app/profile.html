@@ -30,15 +30,15 @@
                     ログイン
                 </button>
             </div>
-            <div>
-                <!-- TODO: ユーザー名（認証後） -->
+
+            <div id="userNameDisplay" class="navbar-brand fw-bold">
+                <!-- ユーザー名を表示（認証後） -->
             </div>
         </div>
-
     </header>
 
     <!-- 自分のプロフィールの時にのみ表示 -->
-    <div class="container-fluid d-flex mb-5 border-bottom">
+    <div id="profileButtons" class="container-fluid d-flex mb-5 border-bottom d-none">
         <button type="button" id="changeProfileBtn" class="btn btn-primary me-auto p-2">
             <i class="bi bi-pencil-square"></i>
             プロフィール編集
@@ -50,60 +50,45 @@
     </div>
 
     <main class="container">
-
-        <section>
-            <!-- ユーザータイムライン -->
-
-            <article class="d-flex justify-content-center mb-5">
-                <!-- 画面表示確認用 -->
-              <div class="post-card" style="width: 35rem;">
-                <div class="card-header d-flex">
-                    <div class="me-auto p-2"><a id="userName">ユーザー名</a></div>
-                    <div class="p-2">投稿日</div>
-                </div>                  
-                <img src="イメージ画像のアイコン素材 2.png" class="card-img-top" alt="投稿画像">
-                <div class="card-body">
-                  <p class="card-text">キャプションの内容がここに入ります。キャプションの内容がここに入ります。キャプションの内容がここに入キャプションの内容がここに入ります。キャプションの内容がここに入ります。キャプションの内容がここに入</p>
-                </div>
-                <div class="d-flex justify-content-end">
-                    <!-- コメント数を表示し、クリックでコメント一覧を表示 -->
-                    <a id="commentCount" class="card-link" data-bs-toggle="modal" data-bs-target="#commentModal">コメント件数</a>
-                </div>
-              </div>
-            </article>
-
-            <article id="postsContainer" class="d-flex justify-content-center">
+        <!-- タイムライン -->
+        <section id="userTimeline" class="vh-75">
                 <!-- 動的に投稿を生成 -->
-            </article>
-
         </section>
-        
+         
         <div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
             <!-- コメント用モーダル -->
             <div class="modal-dialog">
                 <div class="modal-content">
     
-                    <div class="modal-body">
+                    <div id="commentsContainer" class="modal-body">
                         <!-- コメント一覧 -->
-                         
+    
                         <div class="comment-card border-bottom mb-3">
-                            <!-- 表示確認用コメント -->
-                            <div class="card-header d-flex ">
-                                <div class="me-auto p-2">ユーザー名</div>
-                                <div class="p-2">投稿日</div>
+                            <!-- 表示確認用 -->
+                            <div class="card-header d-flex">
+                                <div class="me-auto p-2">comment.user.name</div>
+                                <div class="p-2">comment.created_at</div>
                             </div>                  
                             <div class="card-body">
-                              <p class="card-text">コメントの内容がここに入ります。コメントの内容がここに入ります。コメントの内容がここに入ります。</p>
+                              <p class="card-text">comment.content</p>
                             </div>
                         </div>
 
-                        <div id="commentsContainer" class="comment-card border-bottom mb-3">
-                            <!-- 動的にコメントを生成 -->
+                    </div>
+
+                    <form id="commentForm" class="d-none">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="commentContent" rows="3" placeholder="コメントする" maxlength="100" required></textarea>
                         </div>
+                        <div class="modal-footer">    
+                            <button type="button" class="btn btn-secondary d-flex justify-content-end" data-bs-dismiss="modal">キャンセル</button>
+                            <button type="button" id="createCommentBtn" class="btn btn-primary d-flex justify-content-end">コメント</button>
+                        </div>
+                    </form>
                 </div>
+
             </div>
         </div>
-
     </main>
 
     <footer class="navbar navbar-expand-lg navbar-light bg-white border-top sticky-bottom">
@@ -114,7 +99,7 @@
             </button>
             
             <!-- TODO: ログイン時にのみ表示 -->
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#postModal">
+            <button type="button" id="postBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#postModal">
                 <i class="bi bi-send-plus"></i>
                 投稿
             </button>
@@ -125,26 +110,24 @@
         </div>
     </footer>
 
-    <!-- モーダル表示 -->
+    <!-- 投稿用モーダル -->
     <div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel" aria-hidden="true">
-        <!-- 投稿用モーダル -->
         <div class="modal-dialog">
             <div class="modal-content">
-
-                <div class="modal-body">
-                    <form id="postForm">
-                        <div class="mb-3">
-                            <label for="postImage" class="form-label"><i class="bi bi-camera text-primary"></i> 画像</label>
-                            <input class="form-control" type="file" id="postImage" accept="image/jpg, image/jpeg, image/png, image/gif">
-                            <div class="form-text">JPG, JPEG, PNG, GIF（最大2MB）</div>
-                        </div>
-                        <textarea class="form-control" id="postContent" rows="3" placeholder="今何をしていますか？" maxlength="100" required></textarea>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
-                    <button type="button" class="btn btn-primary">投稿する</button>
-                </div>
+                <form id="postForm">
+                    <div class="modal-body">                   
+                            <div class="mb-3">
+                                <label for="postImage" class="form-label"><i class="bi bi-camera text-primary"></i> 画像</label>
+                                <input class="form-control" type="file" id="postImage" name="image" accept="image/jpg, image/jpeg, image/png, image/gif" required>
+                                <div class="form-text">JPG, JPEG, PNG, GIF（最大2MB）</div>
+                            </div>
+                            <textarea class="form-control" name="content" rows="3" placeholder="キャプション" maxlength="100" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                        <button type="submit" id="createPostBtn" class="btn btn-primary">投稿する</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -153,7 +136,7 @@
 
     <script src="js/app.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/user-post.js"></script>
+    <script src="js//user-post.js"></script>
     <script src="js/comment.js"></script>
 </body>
 </html>

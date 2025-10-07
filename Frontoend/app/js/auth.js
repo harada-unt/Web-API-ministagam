@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('ログイン処理開始');
 
         // フォームからログインIDとパスワードを取得
-        const loginId = document.getElementById('loginId').value;
+        const login_id = document.getElementById('login_id').value;
         const password = document.getElementById('password').value;
 
         // TODO: バリデーション
@@ -40,18 +40,18 @@ document.addEventListener('DOMContentLoaded', function() {
        
 
         try {
-            const url = 'http://localhost:8000/api/v1/auth/login';
+            const url = 'http://localhost:80/api/v1/auth/login';
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ loginId, password })
+                body: JSON.stringify({ login_id, password })
             });
 
             if (response.ok) {
-                const data = await response.json();
-                const token = data.token;
+                const login = await response.json();
+                const token = login.data.token
 
                 // ローカルストレージにトークンを保存
                 localStorage.setItem('authToken', token);
@@ -73,17 +73,24 @@ document.addEventListener('DOMContentLoaded', function() {
         // 本当にログアウトするか確認
         alert('ログアウトしますか？');
         if (true) {
-            const token = localStorage.getItem('authToken');
-            if (token) {
-                // ローカルストレージからトークンを削除
+            try {
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    // TODO response
+                    const url = 'http://localhost:80/api/v1/auth/logout';
+                    // ローカルストレージからトークンを削除
+                    localStorage.removeItem('authToken');
+                    // ホーム画面にリダイレクト
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                console.error('ログアウト処理に失敗しました:', error);
+                // 失敗してもログを残してトークンを削除
                 localStorage.removeItem('authToken');
-                // ホーム画面にリダイレクト
-                window.location.href = 'index.html';
-            } 
+            }
         }
 
     }
-
 
     bindEventListeners();
 });

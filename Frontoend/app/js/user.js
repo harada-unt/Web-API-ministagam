@@ -6,42 +6,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function bindUserEvents() {
         // 新規登録ボタン
-        const registerUserBtn = document.getElementById('registerUserBtn');
-        if (registerUserBtn) {
-            registerUserBtn.addEventListener('click', function() {
-                registerUser();
+        const registerForm = document.getElementById('registerForm');
+        if (registerForm) {
+            registerForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // フォームのデフォルトの送信を防止
+                registerUser(e.target);
             })
         }
 
         // プロフィール更新ボタン
-        const changeProfileBtn = document.getElementById('changeProfileBtn');
-        if (changeProfileBtn) {
-            changeProfileBtn.addEventListener('click', function() {
-                changeProfile();
+        const profileForm = document.getElementById('profileForm');
+        if (profileForm) {
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // フォームのデフォルトの送信を防止
+                changeProfile(e.target);
             })
         }
     }
 
     // ユーザー登録
-    async function registerUser() {
-        const userName = document.getElementById('userName').value;
-        const loginId = document.getElementById('loginId').value;
-        const password = document.getElementById('password').value;
-        const passwordConfirm = document.getElementById('passwordConfirm').value;
-
-
-        // TODO: バリデーション
-
-        const formData = new FormData();
-        formData.append('userName', userName);
-        formData.append('loginId', loginId);
-        formData.append('password', password);
+    async function registerUser(form) {
+        console.log('ユーザー登録処理開始');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        console.log('フォームデータ', data);
+        
+        // バリデーション
+        if (data.password !== data.passwordConfirm) {
+            alert('パスワードが一致しません。');
+            return;
+        }
+        if (data.password.length < 8) {
+            alert('パスワードは8文字以上で入力してください。');
+            return;
+        }
 
         try {
-            const url = 'http://localhost:8000/api/v1/users/register'
+            const url = 'http://localhost:80/api/v1/users/register'
             const response = await fetch(url, {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify(data)
             });
 
             if (response.ok) {
@@ -60,27 +67,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // プロフィール変更
-    async function changeProfile() {
+    async function changeProfile(form) {
         const token = localStorage.getItem('authToken');
+        console.log('ユーザー登録処理開始');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        console.log('フォームデータ', data);
+
+        // バリデーション
+        if (data.password !== data.passwordConfirm) {
+            alert('パスワードが一致しません。');
+            return;
+        }
+        
+        // パスワードの入力がある場合、8文字以上であることを確認  入力がない場合はスキップ
+        if (data.password && data.password.length < 8) {
+            alert('パスワードは8文字以上で入力してください。');
+            return;
+        }
 
         if (token) {
-            const userName = document.getElementById('userName').value;
-            const password = document.getElementById('password').value;
-            const passwordCofirm = document.getElementById('passwordConfirm').value;
-            //  TODO: バリデーション
-
-            const formData = new FormData();
-            formData.append('userName', userName);
-            formData.append('password', password);
-            
             try {
-                const url = 'http://localhost:8000/api/v1/users/profile';
+                const url = 'http://localhost:80/api/v1/users/profile';
                 const response = await fetch(url, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
+                    'content-type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
                 });
 
                 if (response.ok) {

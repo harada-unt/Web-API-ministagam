@@ -1,73 +1,148 @@
 document.addEventListener('DOMContentLoaded', function() {
     // ユーザーの投稿を取得し表示する
 
-    // 投稿のユーザーネームをクリックすると、そのユーザーのプロフィールページに遷移する
-    function bindEventListeners() {
-        const userName = document.getElementById('userName');
-        if (userName) {
-            userName.addEventListener('click', function() {
-                const userId = userName.dataset.userId;
-                window.location.href = `profile.html?userId=${userId}`;
-                getUserPosts(userId);
+    let currentPage = 1; // 現在のページ番号
+    let isLoading = false; // ロード中フラグ
+    let hasMorePosts = true; // 追加の投稿があるかどうかのフラグ
+    let observer = null; // Intersection Observerのインスタンス
+
+    function bindPostEvents() {
+        const postForm = document.getElementById('postForm');
+        if (postForm) {
+            postForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // フォームのデフォルトの送信を防止
+                createPost(e.target);
             });
-        }
-
-        // プロフィールボタン
-        const profileBtn = document.getElementById('profileBtn');
-        if (profileBtn) {
-            profileBtn.addEventListener('click', function() {
-                const userId = getUserId();
-
-                if (!userId) {
-                    window.location.href = `profile.html?userId=${userId}`;
-                    getUserPosts(userId);
-                } else {
-                    alert('ログインが必要です。');
-                    window.location.href = 'login.html';
-                }
-            })
         }
     }
 
 
-    async function getUserPosts(userId) {
+    // Intersection Observerの設定
+    function setupInfiniteScrollObserver() {
+        // センチネル要素を作成(監視対象)
+        const sentinel = document.createElement('div');
+        sentinel.id = 'scroll-sentinel';
+        sentinel.style.height = '1px';
+
+        const userTimeline = document.getElementById('userTimeline');
+        if (userTimeline) {
+            userTimeline.appendChild(sentinel);
+        }
+
+        // Intersection Observerのオプション
+        const options = {
+            root: null, // ビューポートをルートに設定
+            rootMargin: '0px',
+            threshold: 1.0 // センチネルが完全に表示されたときにコールバックを呼び出す
+        };
+
+        // Observerを作成
+        observer = new IntersectionObserver(callback, options);
+        observer.observe(sentinel);
+    }
+
+    // Observerを停止
+    function stopObserver() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+    }
+
+    // Observerを再開
+    function restartObserver() {
+        const sentinel = document.getElementById('scroll-sentinel');
+        if (observer && sentinel) {
+            observer.observe(sentinel);
+        }
+    }
+
+    function callback(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting && !isLoading && hasMorePosts) {
+                // センチネルが画面内に入った
+                currentPage++;
+                getUserPosts(user_id, currentPage, false);
+            }
+        });
+    }
+    
+
+    // ユーザーの投稿を取得し表示する
+    async function getUserPosts(user_id, page = 1, clearExisting = true) {
+
+        isLoading = true;
+        if (clearExisting) {
+            showLoadingIndicator();
+        }
+
+         // 日付フォーマット関数
+         function formatDate(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+    
+             return `${year}/${month}/${day}`;
+        }
         try {
-            const url = `http://localhost:8000/api/v1/users/${userId}/posts`;
+            const url = `http://localhost:80/api/v1/posts/${user_id}?page=${page}`;
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`レスポンスステータス: ${response.status}`);
             }
 
             const posts = await response.json();
-            const postsContainer = document.getElementById('postsContainer');
-            postsContainer.innerHTML = ''; // 既存の投稿をクリア
+            const postsData = posts.data;
+            const postsContainer = document.getElementById('userTimeline');
+
+            if (clearExisting) {
+                // 初回読み込み時は既存の投稿をクリア
+                postsContainer.innerHTML = ''; 
+            }
+
+            // ページネーションの確認
+            if (posts.current_page >= posts.pagination.last_page) {
+                hasMorePosts = false;
+                stopObserver(); // 監視を停止
+                if (!clearExisting) {
+                    console.log('これ以上投稿はありません');
+                }
+            }
 
             // 投稿データが存在しない場合の処理
-            if (posts.length === 0) {
+            if (postsData.length === 0 && page === 1) {
+                console.log('投稿データが存在しません');
                 postsContainer.innerHTML = `
-                    <div class="text-center py-5" id="noPostsMessage">
+                    <div class="text-center vh-100 py-5" id="noPostsMessage">
                         <i class="bi bi-camera display-1 text-muted"></i>
                         <h4 class="text-muted mt-3">まだ投稿がありません</h4>
                         <p class="text-muted">投稿データをがありません</p>
                     </div>
                 `;
+                stopObserver(); // 監視を停止
                 return;
             }
 
-            posts.forEach(post => { 
-                const postElement = document.createElement('div');
-                postElement.classList.add('post-card');
-                postElement.style.width = '35rem;';
+            const sentinel = document.getElementById('scroll-sentinel');
+
+            postsData.forEach(post => { 
+                const postElement = document.createElement('article');
+                postElement.classList.add("d-flex", "justify-content-center");
                 postElement.innerHTML = `
                 <div class="post-card" style="width: 35rem;">
                     <div class="card-header d-flex">
-                            <div class="me-auto p-2"><a id="userName" data-user-id="${post.user.id}">
+                        <div class="me-auto p-2">
+                            <a class="username-link" data-user-id="${post.user.id}">
                                 ${post.user.name}
                             </a>
                         </div>
                         <div class="p-2">
-                            ${post.created_at}
+                            ${formatDate(post.created_at)}
                         </div>
+                        <button type="button" id="postDeleteBtn${post.id}" class="deletePostBtn btn btn-danger d-none">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
 
                     <img src="${post.image_path}" class="card-img-top" alt="投稿画像">
@@ -77,53 +152,239 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="d-flex justify-content-end">
                         <a id="commentCount" class="card-link comment-link" data-bs-toggle="modal" data-bs-target="#commentModal" data-post-id="${post.id}">
-                            コメント${post.comments_count}件
+                            コメント${post.comment_count}件
                         </a>
                     </div>
                 </div>
                 `;
-                postsContainer.appendChild(postElement);
+
+                // センチネルの前に挿入
+                if (sentinel) {
+                    postsContainer.insertBefore(postElement, sentinel);
+                } else {
+                    postsContainer.appendChild(postElement);
+                }
+
+                postElement.querySelector(`#postDeleteBtn${post.id}`).addEventListener('click', function() {                
+                    deletePost(post.id);
+                });
+
+                // 投稿のユーザーIDと認証ユーザーIDが一致する時のみ、削除ボタンを表示                
+                displayDeleteBtn(post.user.id, post.id);
             });
+
+            // 初回読み込み時のみ、Intersection Observerを設定
+            if(clearExisting && postsData.length > 0) {
+                stopObserver(); // 既存の監視を停止
+                setupInfiniteScrollObserver();
+            }
+            
         } catch (error) {
             // エラーメッセージの表示
             console.error('投稿の取得に失敗しました:', error);
 
-            const postsContainer = document.getElementById('postsContainer');
-            postsContainer.innerHTML = `
-                <div class="text-center py-5" id="noPostsMessage">
-                    <i class="bi bi-camera display-1 text-muted"></i>
-                    <h4 class="text-muted mt-3">まだ投稿がありません</h4>
-                    <p class="text-muted">投稿データを読み込めませんでした</p>
-                </div>
-            `;
-            return;
+            if (page === 1) {
+                const postsContainer = document.getElementById('usetTimeline');
+                postsContainer.innerHTML = `
+                    <div class="text-center vh-100 py-5" id="noPostsMessage">
+                        <i class="bi bi-camera display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">まだ投稿がありません</h4>
+                        <p class="text-muted">投稿データを読み込めませんでした</p>
+                    </div>
+                `;
+                stopObserver(); // 監視を停止
+            } else {
+                alert('投稿データの読み込みに失敗しました。');
+            }
+        } finally {
+            isLoading = false;
+            hideLoadingIndicator();
         }
     }
 
 
-    // 認証状態を確認してuserIdを取得
-    async function getUserId() {
-        const token = localStorage.getItem('token');
+    // ローディング表示
+    function showLoadingIndicator() {
+        let loader = document.getElementById('loading-indicator');
+        
+        // ローディング要素が存在しない場合は作成
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'loading-indicator';
+            loader.className = 'vh-100 text-center py-4';
+            loader.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">読み込み中...</span>
+                </div>
+                <p class="mt-2 text-muted">読み込み中...</p>
+            `;
+            
+            // センチネルの前に挿入
+            const sentinel = document.getElementById('scroll-sentinel');
+            const container = document.getElementById('timeline');
+            
+            if (sentinel && container) {
+                container.insertBefore(loader, sentinel);
+            } else if (container) {
+                container.appendChild(loader);
+            }
+        }
+        
+        loader.style.display = 'block';
+    }
+
+    function hideLoadingIndicator() {
+        const loader = document.getElementById('loading-indicator');
+        if (loader) {
+            loader.style.display = 'none';
+        }
+    }
+
+     // 投稿データの登録
+     async function createPost(form) {
+        console.log('投稿作成処理開始');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        console.log('フォームデータ', data);
+        const token = localStorage.getItem('authToken');
+
         if (token) {
+            // TODO: バリデーション
+
             try {
-                const url = 'http://localhost:8000/api/v1/auth/user';
-                const response = await fetch(url);
+                const url = 'http://localhost:80/api/v1/posts';
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
                 if (response.ok) {
-                    const user = await response.json();
-                    return user.id;
+                    // 投稿成功時の処理
+                    alert('投稿が成功しました。');
+                    // リダイレクト
+                    getUserPosts(localStorage.getItem('user_id'));
                 } else {
-                    console.log('未認証ユーザー');
-                    return null;
+                    const errorData = await response.json();
+                    alert(`投稿に失敗しました: ${errorData.message}`);
                 }
             } catch (error) {
-                console.error('ユーザー情報の取得に失敗しました:', error);
-                return null;
+                console.error('投稿の作成に失敗しました:', error);
+                alert('投稿の作成に失敗しました。');
             }
-        } else {
-            console.log('トークンが存在しません。未認証ユーザーとして扱います。');
-            return null;
         }
     }
 
-    bindEventListeners();
+
+    // 投稿のユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
+    async function displayDeleteBtn(postUserId, postId) {
+
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const url = 'http://localhost:80/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    const authUser =user.data.user.id;
+                    if (authUser === postUserId) {
+                        const deletePostBtn = document.getElementById(`postDeleteBtn${postId}`);
+                        if (deletePostBtn) {
+                            deletePostBtn.classList.remove('d-none');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('認証ユーザーの取得に失敗しました:', error);
+            }
+        }
+    }
+
+
+    // 投稿データの削除
+    async function deletePost(post_id) {
+        console.log('投稿削除処理開始');
+        const token = localStorage.getItem('authToken');
+        // 本当にログアウトするか確認
+        alert('この投稿を削除しますか？');
+        if (true) {
+            if (token) {
+                try {
+                    const url = `http://localhost:80/api/v1/posts/${post_id}`;
+                    const response = await fetch(url, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        // 投稿削除成功時の処理
+                        alert('投稿の削除が完了しました。');
+                        // 投稿一覧の更新
+                        getUserPosts(localStorage.getItem('user_id'));
+                    } else {
+                        const errorData = await response.json();
+                        alert(`投稿の削除に失敗しました: ${errorData.message}`);
+                    }
+                } catch (error) {
+                    console.error('投稿の削除に失敗しました:', error);
+                    alert('投稿の削除に失敗しました。');
+                }   
+            }
+        }
+    }
+
+
+    // 認証状態を確認して自分のプロフィールの場合はprofileButtonsを表示
+    async function checkAuthStatus() {
+        // 認証トークンの取得
+        const token = localStorage.getItem('authToken');
+        // ユーザーIDの取得
+        const user_id = localStorage.getItem('user_id');
+    
+        if (token) {    
+            try {
+                const url = 'http://localhost:80/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    authUser = user.data.user.id;
+                    if (authUser == user_id) {
+                        // 自分のプロフィールの場合
+                        showAuthenticatedUI();
+                    }
+                } 
+            } catch (error) {
+                console.error('認証状態の確認に失敗しました。', error);
+                // 非認証状態のUI表示
+            }
+        }
+    }
+
+    function showAuthenticatedUI() {
+        const profileButtons = document.getElementById('profileButtons');
+        if (profileButtons) {
+            profileButtons.classList.remove('d-none');
+        }
+    }
+
+
+    const user_id = localStorage.getItem('user_id');
+
+    getUserPosts(user_id, 1, true);
+    bindPostEvents();
+    checkAuthStatus();
 })

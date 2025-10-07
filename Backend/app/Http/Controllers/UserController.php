@@ -70,7 +70,7 @@ class UserController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'プロフィールを更新しました。',
-                'data' => $user
+                'data' => UserResource::collection([$user])
             ], Response::HTTP_OK);
 
         } catch (Exception $e) {

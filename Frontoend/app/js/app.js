@@ -50,6 +50,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = 'index.html';
             });
         }
+
+        // プロフィールボタン
+        const profileBtn = document.getElementById('profileBtn');
+        if (profileBtn) {
+            profileBtn.addEventListener('click', function() {
+                handleProfileClick();
+            });
+        }
+        async function handleProfileClick() {
+            const user_id = await getUserId();
+            
+            if (user_id) {
+                localStorage.setItem('user_id', user_id);
+                window.location.href = 'profile.html';
+            } else {
+                alert('ログインが必要です。');
+                window.location.href = 'login.html';
+            }
+        }
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('.username-link');
+            
+            if (link) {
+                const user_id = link.dataset.userId;
+                localStorage.setItem('user_id', user_id);
+                window.location.href = 'profile.html';
+                getUserPosts(user_id);
+            }
+        });
     }
     
     
@@ -62,8 +91,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
         if (token) {    
             try {
-                const url = 'http://localhost:8000/api/v1/auth/user';
-                const response = await fetch(url);
+                const url = 'http://localhost:80/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 if (response.ok) {
                     const user = await response.json();
                     // 認証状態のUI表示
@@ -84,6 +118,35 @@ document.addEventListener('DOMContentLoaded', function() {
             showUnauthenticatedUI();
         }
     }
+
+    // 認証状態を確認してuserIdを取得
+    async function getUserId() {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            try {
+                const url = 'http://localhost:80/api/v1/auth/user';
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const user = await response.json();
+                    return user.data.user.id;
+                } else {
+                    console.log('未認証ユーザー');
+                    return null;
+                }
+            } catch (error) {
+                console.error('ユーザー情報の取得に失敗しました:', error);
+                return null;
+            }
+        } else {
+            console.log('トークンが存在しません。未認証ユーザーとして扱います。');
+            return null;
+        }
+    }
     
 
     /**
@@ -93,14 +156,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // ヘッダーの表示切替
         document.getElementById('authButtons').classList.add('d-none');
         // ユーザー名を表示
-        document.getElementById('userNameDisplay').textContent = user.username;
+        document.getElementById('userNameDisplay').textContent = user.data.user.name;
     
         // フッターの表示切替
         document.getElementById('postBtn').classList.remove('d-none');
         document.getElementById('profileBtn').classList.remove('d-none');
     
-        // コメントモーダルの入力フォームを表示
-        document.getElementById('commentForm').classList.remove('d-none')
+        // TODO: コメントモーダルの入力フォームを表示
+        if (document.getElementById('commentForm')) {
+            document.getElementById('commentForm').classList.remove('d-none')
+        }
     }
     
     

@@ -19,8 +19,8 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'login_id' => $this->login_id,
             'password' => $this->password,
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s')
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PostResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,8 +24,23 @@ class PostController extends Controller
                 ->paginate(10);
 
             return response()->json([
-                "status" => "success",
-                "data" => $posts
+                'status' => 'success',
+                'current_page' => $posts->currentPage(),
+                'data' => PostResource::collection($posts),
+                // pagenation用データ
+                'pagination' => [
+                    'first_page_url' => $posts->url(1),
+                    'from' => $posts->firstItem(),
+                    'last_page' => $posts->lastPage(),
+                    'last_page_url' => $posts->url($posts->lastPage()),
+                    'links' => $posts->linkCollection(),
+                    'next_page_url' => $posts->nextPageUrl(),
+                    'path' => $posts->path(),
+                    'per_page' => $posts->perPage(),
+                    'prev_page_url' => $posts->previousPageUrl(),
+                    'to' => $posts->lastItem(),
+                    'total' => $posts->total(),
+                ]
             ], Response::HTTP_OK);
 
         } catch (Exception $e) {
@@ -33,6 +49,7 @@ class PostController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         };
     }
+
 
     /**
      * 特定ユーザーの投稿一覧取得
@@ -44,11 +61,26 @@ class PostController extends Controller
             ->where('user_id', $user_id)
             ->where('deleted_at', null)
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate(perPage: 10);
 
         return response()->json([
-            "status" => "success",
-            "data" => $posts
+            'status' => 'success',
+            'current_page' => $posts->currentPage(),
+            'data' => PostResource::collection($posts),
+            // pagenation用データ
+            'pagination' => [
+                'first_page_url' => $posts->url(1),
+                'from' => $posts->firstItem(),
+                'last_page' => $posts->lastPage(),
+                'last_page_url' => $posts->url($posts->lastPage()),
+                'links' => $posts->linkCollection(),
+                'next_page_url' => $posts->nextPageUrl(),
+                'path' => $posts->path(),
+                'per_page' => $posts->perPage(),
+                'prev_page_url' => $posts->previousPageUrl(),
+                'to' => $posts->lastItem(),
+                'total' => $posts->total(),
+            ]
         ], Response::HTTP_OK);
     }
 
