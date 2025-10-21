@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login_id' => ['required','string','max: 12'],
+            'login_id' => ['required','string','max:12'],
             'password' => ['required','string','min:8','max:36'],
         ];
     }
@@ -48,7 +48,7 @@ class LoginRequest extends FormRequest
             'login_id' => $this->input('login_id'),
             'password' => $this->input('password'),
         ];
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::guard('web')->attempt($credentials)) {
             $res = response()->json([
                 'message' => 'ログインIDまたはパスワードが正しくありません。',
             ], Response::HTTP_UNAUTHORIZED);

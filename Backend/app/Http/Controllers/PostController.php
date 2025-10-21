@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 use App\Http\Requests\Api\PostRequest;
 use App\Models\Post;
-use App\Models\User;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\PostIndexRequest;
 use App\Http\Resources\PostResource;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Storage;
 use Exception;

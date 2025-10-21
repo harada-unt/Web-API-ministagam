@@ -2,33 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Http\Requests\Api\LoginRequest;
 use Illuminate\support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Carbon\Carbon;
-use Exception;
 
 class AuthController extends Controller
 {
     /**
-     * ログインIDとパスワードで認証し、セッションを開始する
-     * @param \Illuminate\Http\Request $request
+     * ログインIDとパスワードで認証し、新しいセッションを生成して返す
+     * @param \App\Http\Requests\Api\LoginRequest $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $credentials = $request->only('login_id', 'password');
-        if (!Auth::guard('web')->attempt($credentials) ) {
-            return response()->json([
-                'message' => 'ログインIDまたはパスワードが正しくありません。',
-            ], Response::HTTP_UNAUTHORIZED);
-        }
+        // authenticate() メソッドで認証処理を実行
+        $request->authenticate();
 
+        // 認証成功後のセッション再生成
         $request->session()->regenerate();
+
+        // 認証済みユーザーの取得
         $user = Auth::guard('web')->user();
+
         return response()->json([
             'status' => 'success',
             'message' => 'ログインしました。',
