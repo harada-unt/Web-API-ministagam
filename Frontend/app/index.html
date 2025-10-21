@@ -10,7 +10,6 @@
 </head>
 
 <body>
-
     <header class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
         <div class="container-fluid">
             <!-- ロゴ -->
@@ -106,7 +105,7 @@
                     <div class="modal-body">                   
                             <div class="mb-3">
                                 <label for="postImage" class="form-label"><i class="bi bi-camera text-primary"></i> 画像</label>
-                                <input class="form-control" type="file" name="image" accept="image/jpg, image/jpeg, image/png, image/gif" required>
+                                <input class="form-control" id="postImage" type="file" name="image" accept="image/jpg, image/jpeg, image/png, image/gif" required>
                                 <div class="form-text">JPG, JPEG, PNG, GIF（最大2MB）</div>
                             </div>
                             <textarea class="form-control" name="content" rows="3" placeholder="キャプション" maxlength="100" required></textarea>

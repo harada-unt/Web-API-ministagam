@@ -1,4 +1,6 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    const baseUrl = 'http://127.0.0.1:80';
+    let authUser = null;
 
     function bindEventListeners() {
         // ヘッダーボタン
@@ -7,7 +9,41 @@ document.addEventListener('DOMContentLoaded', function() {
         // フッターボタン
         bindFooterEvents();
     }
-    
+
+    // Cookieから特定の値を取得する関数
+    function getCookieValue(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    async function fetchAuthUser() {
+        try {
+            const xsrfToken = getCookieValue('XSRF-TOKEN');
+            if (!xsrfToken) {
+                return null;
+            }
+
+            const url = `${baseUrl}/api/v1/auth/user`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
+                },
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return data.user;
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error('ユーザー情報の取得に失敗しました:', error);
+            return null;
+        }
+    }
     
     /**
      * ヘッダーのイベント
@@ -38,7 +74,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-
     /**
      * フッターのイベント
      */
@@ -59,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         async function handleProfileClick() {
-            const user_id = await getUserId();
+            const user_id = authUser ? authUser.id : null;
             
             if (user_id) {
                 localStorage.setItem('user_id', user_id);
@@ -69,9 +104,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = 'login.html';
             }
         }
+
+        // ユーザー名リンククリックでプロフィールへ遷移
         document.addEventListener('click', function(e) {
             const link = e.target.closest('.username-link');
-            
             if (link) {
                 const user_id = link.dataset.userId;
                 localStorage.setItem('user_id', user_id);
@@ -80,89 +116,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    
-    /**
-     * 認証状態の確認
-     */
-    async function checkAuthStatus() {
-        // 認証トークンの取得
-        const token = localStorage.getItem('authToken');
-    
-        if (token) {    
-            try {
-                const url = 'http://localhost:80/api/v1/auth/user';
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const user = await response.json();
-                    // 認証状態のUI表示
-                    showAuthenticatedUI(user);
-                } else {
-                    console.log('未認証ユーザー');
-                    // 非認証状態のUI表示
-                    showUnauthenticatedUI();
-                }
-            } catch (error) {
-                console.error('認証状態の確認に失敗しました。', error);
-                // 非認証状態のUI表示
-                showUnauthenticatedUI();
-            }
-        } else {
-            console.log('トークンが存在しません。未認証ユーザーとして扱います。');
-            // 非認証状態のUI表示
-            showUnauthenticatedUI();
-        }
-    }
 
-    // 認証状態を確認してuserIdを取得
-    async function getUserId() {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            try {
-                const url = 'http://localhost:80/api/v1/auth/user';
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const user = await response.json();
-                    return user.data.user.id;
-                } else {
-                    console.log('未認証ユーザー');
-                    return null;
-                }
-            } catch (error) {
-                console.error('ユーザー情報の取得に失敗しました:', error);
-                return null;
-            }
-        } else {
-            console.log('トークンが存在しません。未認証ユーザーとして扱います。');
-            return null;
-        }
-    }
-    
 
     /**
      * 認証状態のUI表示
      */
-    function showAuthenticatedUI(user) {
+    function showAuthenticatedUI(authUser) {
         // ヘッダーの表示切替
         document.getElementById('authButtons').classList.add('d-none');
         // ユーザー名を表示
-        document.getElementById('userNameDisplay').textContent = user.data.user.name;
+        document.getElementById('userNameDisplay').textContent = authUser.name;
     
         // フッターの表示切替
         document.getElementById('postBtn').classList.remove('d-none');
         document.getElementById('profileBtn').classList.remove('d-none');
     
-        // TODO: コメントモーダルの入力フォームを表示
+        // コメントモーダルの入力フォームを表示
         if (document.getElementById('commentForm')) {
             document.getElementById('commentForm').classList.remove('d-none')
         }
@@ -181,11 +150,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('profileBtn').classList.add('d-none');
     
         // コメントモーダルの入力フォームを非表示
-        // document.getElementById('commentForm').classList.add('d-none')
+        if (document.getElementById('commentForm')) {
+            document.getElementById('commentForm').classList.add('d-none')
+        }
+    }
+
+    authUser = await fetchAuthUser();
+   
+    if (authUser) {
+        showAuthenticatedUI(authUser);
+    }  else {
+        showUnauthenticatedUI();
     }
 
     bindEventListeners();
-    checkAuthStatus();
-    
 });
 

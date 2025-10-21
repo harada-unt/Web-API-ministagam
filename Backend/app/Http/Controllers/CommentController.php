@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CommentResource;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 use Exception;
@@ -26,7 +27,7 @@ class CommentController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data' => $comments,
+                'data' => CommentResource::collection($comments),
             ], Response::HTTP_OK);
 
         } catch (Exception $e) {
@@ -43,7 +44,7 @@ class CommentController extends Controller
             $validated = $request->validate([
                 'content' => 'required|max:50'
             ], [
-                'content.required' => 'コメント内容は必須です。',
+                'content.required' => 'コメント本文は必須です。',
                 'content.max' => 'コメントは50文字以内で入力してください。'
             ]);
 

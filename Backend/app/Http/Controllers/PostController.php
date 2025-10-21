@@ -1,8 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Http\Requests\Api\PostRequest;
 use App\Models\Post;
+use App\Models\User;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\PostIndexRequest;
 use App\Http\Resources\PostResource;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -17,11 +20,18 @@ class PostController extends Controller
      * 投稿一覧取得
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getPost() {
+    public function getPost(PostIndexRequest $request) {
         try {
+            // バリデーション済みのパラメータを取得
+            $validated = $request->validated();
+
+            $perPage = $validated['per_page'];
+            $sort = $validated['sort'];
+            $order = $validated['order'];
+
             $posts = Post::with('user:id,name')
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
+                ->orderBy($sort, $order)
+                ->paginate($perPage);
 
             return response()->json([
                 'status' => 'success',
@@ -29,17 +39,22 @@ class PostController extends Controller
                 'data' => PostResource::collection($posts),
                 // pagenation用データ
                 'pagination' => [
+                    'per_page' => $posts->perPage(),
+                    'total' => $posts->total(),
                     'first_page_url' => $posts->url(1),
-                    'from' => $posts->firstItem(),
                     'last_page' => $posts->lastPage(),
                     'last_page_url' => $posts->url($posts->lastPage()),
-                    'links' => $posts->linkCollection(),
                     'next_page_url' => $posts->nextPageUrl(),
+                    'from' => $posts->firstItem(),
                     'path' => $posts->path(),
-                    'per_page' => $posts->perPage(),
+                    'links' => $posts->linkCollection(),
+                    'has_more_pages' => $posts->hasMorePages(),
                     'prev_page_url' => $posts->previousPageUrl(),
                     'to' => $posts->lastItem(),
-                    'total' => $posts->total(),
+                ],
+                'meta' => [
+                    'timestamp' => now()->toISOString(),
+                    'request_id' => (string) \Str::uuid(),
                 ]
             ], Response::HTTP_OK);
 
@@ -56,32 +71,54 @@ class PostController extends Controller
      * @param mixed $user_id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function getUserPost($user_id) {
-        $posts = Post::with('user:id,name')
-            ->where('user_id', $user_id)
-            ->where('deleted_at', null)
-            ->orderBy('created_at', 'desc')
-            ->paginate(perPage: 10);
+    public function getUserPost(PostIndexRequest $request, $user_id) {
+        try {
+            // バリデーション済みのパラメータを取得
+            $validated = $request->validated();
+            $perPage = $validated['per_page'];
+            $sort = $validated['sort'];
+            $order = $validated['order'];
 
-        return response()->json([
-            'status' => 'success',
-            'current_page' => $posts->currentPage(),
-            'data' => PostResource::collection($posts),
-            // pagenation用データ
-            'pagination' => [
-                'first_page_url' => $posts->url(1),
-                'from' => $posts->firstItem(),
-                'last_page' => $posts->lastPage(),
-                'last_page_url' => $posts->url($posts->lastPage()),
-                'links' => $posts->linkCollection(),
-                'next_page_url' => $posts->nextPageUrl(),
-                'path' => $posts->path(),
-                'per_page' => $posts->perPage(),
-                'prev_page_url' => $posts->previousPageUrl(),
-                'to' => $posts->lastItem(),
-                'total' => $posts->total(),
-            ]
-        ], Response::HTTP_OK);
+            $posts = Post::with('user:id,name')
+                ->where('user_id', $user_id)
+                ->where('deleted_at', null)
+                ->orderBy($sort, $order)
+                ->paginate($perPage);
+
+            if ($posts->isEmpty()) {
+                return response()->json([
+                    'message' => '指定されたユーザーの投稿が見つかりません。'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'current_page' => $posts->currentPage(),
+                'data' => PostResource::collection($posts),
+                // pagenation用データ
+                'pagination' => [
+                    'first_page_url' => $posts->url(page: 1),
+                    'from' => $posts->firstItem(),
+                    'last_page' => $posts->lastPage(),
+                    'last_page_url' => $posts->url($posts->lastPage()),
+                    'links' => $posts->linkCollection(),
+                    'next_page_url' => $posts->nextPageUrl(),
+                    'path' => $posts->path(),
+                    'per_page' => $posts->perPage(),
+                    'prev_page_url' => $posts->previousPageUrl(),
+                    'to' => $posts->lastItem(),
+                    'total' => $posts->total(),
+                ],
+                'meta' => [
+                    'timestamp' => now()->toISOString(),
+                    'request_id' => (string) \Str::uuid(),
+                ]
+            ], Response::HTTP_OK);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => '投稿の取得に失敗しました。'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        };
     }
 
 
@@ -90,35 +127,25 @@ class PostController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function createPost(Request $request) {
+    public function createPost(PostRequest $request) {
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'content' => 'required|max:50',
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-            ], [
-                'conten.required' => '投稿本文は必須です。',
-                'content.max' => '投稿本文は50文字以内で入力してください。',
-                'image.required' => '画像ファイルを選択してください。',
-                'image.image' => '画像ファイルを選択してください。',
-                'image.mimes' => '画像ファイルはjpg, jpeg, png, gif形式である必要があります。',
-                'image.max' => '画像ファイルは5MB以内である必要があります。',
-
-            ]);
-
             $user = auth()->user();
             $imagePath = $request->file('image')->store('posts', 'public');
             $post = Post::create([
                         'user_id' => $user->id,
-                        'content' => $validated['content'],
+                        'content' => $request->content,
                         'image_path' => $imagePath,
                     ]);
+            DB::commit();
 
             return response()->json([
                 "message" => "投稿しました。",
-                "data" => $post
+                "data" => new PostResource($post),
             ], Response::HTTP_CREATED);
 
         } catch (Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'message' => '投稿の作成に失敗しました。'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -161,7 +188,7 @@ class PostController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => '投稿の作成に失敗しました。'
+                'message' => '投稿の削除に失敗しました。'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         };
     }

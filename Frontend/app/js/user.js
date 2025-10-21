@@ -1,4 +1,34 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const baseUrl = 'http://127.0.0.1:80';
+
+    // Cookieから特定の値を取得する関数
+    function getCookieValue(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    async function getCsrfToken() {
+        try {
+            const url = `${baseUrl}/sanctum/csrf-cookie`;
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error('Csrfトークンの取得に失敗しました');
+            }
+            console.log('CSRFトークンの取得に成功しました');
+            
+        } catch (error) {
+            console.error('CSRFトークンの取得に失敗しました:', error);
+            throw error;
+        }
+    }
+
     function bindEventListeners() {
         // ユーザー関連のイベント
         bindUserEvents();
@@ -29,7 +59,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('ユーザー登録処理開始');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
-        console.log('フォームデータ', data);
         
         // バリデーション
         if (data.password !== data.passwordConfirm) {
@@ -40,13 +69,13 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('パスワードは8文字以上で入力してください。');
             return;
         }
-
+        
         try {
-            const url = 'http://localhost:80/api/v1/users/register'
+            const url = `${baseUrl}/api/v1/users/register`
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'content-type': 'application/json'
+                    'content-type': 'application/json',
                 },
                 body: JSON.stringify(data)
             });
@@ -68,11 +97,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // プロフィール変更
     async function changeProfile(form) {
-        const token = localStorage.getItem('authToken');
+        const xsrfToken = getCookieValue('XSRF-TOKEN');
         console.log('ユーザー登録処理開始');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
-        console.log('フォームデータ', data);
 
         // バリデーション
         if (data.password !== data.passwordConfirm) {
@@ -86,14 +114,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (token) {
+        if (xsrfToken) {
             try {
-                const url = 'http://localhost:80/api/v1/users/profile';
+                const url =  `${baseUrl}/api/v1/users/profile`;
                 const response = await fetch(url, {
                     method: 'PUT',
+                    credentials: 'include',
                     headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Accept': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
                 },
                 body: JSON.stringify(data)
                 });

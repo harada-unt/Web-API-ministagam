@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const baseUrl = 'http://127.0.0.1:80';
 
     function bindEventListeners() {
         // コメント関連のイベント
@@ -47,6 +48,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
+    // Cookieから特定の値を取得する関数
+    function getCookieValue(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+    }
 
     // コメント一覧を取得し表示する
     async function getComments(post_id) {
@@ -62,7 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const url = `http://localhost:80/api/v1/posts/${post_id}/comments`;
+            const xsrfToken = getCookieValue('XSRF-TOKEN');
+            const url = `${baseUrl}/api/v1/posts/${post_id}/comments`;
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`レスポンスステータス: ${response.status}`);
@@ -109,13 +117,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
 
-
                 commentElement.querySelector(`#commentDeleteBtn${comment.id}`).addEventListener('click', function() {
                     deleteComment(comment.post_id, comment.id);
                 });
 
                 // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
-                displayDeleteBtn(comment.user_id, comment.id);
+                // displayDeleteBtn(comment.user_id, comment.id);
                 commentsContainer.appendChild(commentElement);
             });
 
@@ -136,18 +143,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // コメントを投稿する
     async function createComment(postId) {
-        const token = localStorage.getItem('authToken');
+        const xsrfToken = getCookieValue('XSRF-TOKEN');
         
-        if (token) {
+        if (xsrfToken) {
             const content = document.getElementById('commentContent').value;
 
             try {
-                const url = `http://localhost:80/api/v1/posts/${postId}/comments`;
+                const url = `${baseUrl}/api/v1/posts/${postId}/comments`;
                 const response = await fetch(url, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
+                        'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
                     },
                     body: JSON.stringify({ content })
                 });
@@ -171,52 +180,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
-    async function displayDeleteBtn(commentUserId, commentId) {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            try {
-                const url = 'http://localhost:80/api/v1/auth/user';
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const user = await response.json();
-                    const authUser = user.data.user.id;
-                    console.log(authUser, commentUserId);
-                    if (authUser === commentUserId) {
-                        const commentDeleteBtn = document.getElementById(`commentDeleteBtn${commentId}`);
-                        if (commentDeleteBtn) {
-                            commentDeleteBtn.classList.remove('d-none');
-                            commentDeleteBtn.dataset.postId = commentUserId; // 投稿IDをデータ属性に設定
-                        }
-                    }
-                } else {
-                    console.log('認証ユーザーの取得に失敗しました。');
-                }
-            } catch (error) {
-                console.error('認証ユーザーの取得に失敗しました:', error);
-            }
-        }
-    }
-
 
     // コメントを削除する
     async function deleteComment(post_id, comment_id) {
         alert('このコメントを削除しますか？');
         if (true) {
-            const token = localStorage.getItem('authToken');
-            if (token) {
+            const xsrfToken = getCookieValue('XSRF-TOKEN');
+            if (xsrfToken) {
                 try {
-                    const url = `http://localhost:80/api/v1/posts/${post_id}/comments/${comment_id}`;
+                    const url = `${baseUrl}/api/v1/posts/${post_id}/comments/${comment_id}`;
                     const response = await fetch(url, {
                         method: 'DELETE',
+                        credentials: 'include',
                         headers: {
-                            'Authorization': `Bearer ${token}`
+                            'Accept': 'application/json',
+                            'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
                         }
                     });
 

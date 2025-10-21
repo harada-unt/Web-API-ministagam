@@ -137,3 +137,4 @@ COPY . /var/www/app
 RUN chown $USERNAME:$USERNAME -R /var/www
 RUN sed -e "s|DocumentRoot /var/www/html|DocumentRoot /var/www/$PUBLIC_DIR|g"\
     -i $APACHE_CONFDIR/sites-available/000-default.conf
+RUN php artisan storage:link || true

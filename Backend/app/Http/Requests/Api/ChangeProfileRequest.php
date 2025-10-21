@@ -34,8 +34,8 @@ class ChangeProfileRequest extends FormRequest
         $validator->after(function ($validator) {
             // nameとpasswordが両方とも未入力の場合のみエラー
             if (!$this->filled('name') && !$this->filled('password')) {
-                $validator->errors()->add('name', 'nameまたはpasswordのいずれかは入力必須です。');
-                $validator->errors()->add('password', 'nameまたはpasswordのいずれかは入力必須です。');
+                $validator->errors()->add('name', 'ユーザー名またはパスワードのいずれかは入力必須です。');
+                $validator->errors()->add('password', 'ユーザー名またはパスワードのいずれかは入力必須です。');
             }
         });
     }

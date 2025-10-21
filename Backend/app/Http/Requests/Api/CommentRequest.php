@@ -7,7 +7,8 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Symfony\Component\HttpFoundation\Response;
 
-class PostRequest extends FormRequest
+
+class  CommentRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,30 +26,30 @@ class PostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => 'required|max:50',
-            'image' => 'required|mimes:jpeg,png,jpg,gif|max:5120',
+            'content' => ['required', 'max: 50'],
         ];
     }
 
-    public function messages()
+    public function messages(): array
     {
         return [
-            'content.required' => '投稿本文は必須です。',
-            'content.max' => '投稿本文は50文字以内で入力してください。',
+            'content.required' => '本文は必須です。',
+            'content.max' => '本文は50文字以内で入力してください。',
             'image.required' => '画像ファイルを選択してください。',
-            'image.uploaded' => '画像ファイルのアップロードに失敗しました。',
+            'image.image' => '画像ファイルを選択してください。',
             'image.mimes' => '画像ファイルはjpg, jpeg, png, gif形式である必要があります。',
-            'image.max' => '画像ファイルは5MB以内である必要があります。',
+            'image.max' => '画像ファイルは5MB以内である必要があります。'
         ];
     }
 
-    protected function failedValidation(Validator $validator)
+    protected function failledValidation(Validator $validator)
     {
         throw new HttpResponseException(
             response()->json([
-                'message' => '無効な入力データです。',
+                'message' => '無効な入力データです',
                 'errors' => $validator->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY)
         );
     }
+
 }

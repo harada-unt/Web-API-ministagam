@@ -14,6 +14,8 @@ services:
         LARAVEL_VERSION: "12.*"
         # プロジェクトソースのうち公開するディレクトリ [""(default) , "html", "app/public"]
         PUBLIC_DIR: "app/public"
+        PHP_UPLOAD_MAX_FILESIZE: "10M"
+        PHP_POST_MAX_SIZE: "10M"
     ports:
       - "80:80"
     environment:

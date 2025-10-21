@@ -1,0 +1,12 @@
+public/storage
+storage/app/public
+storage/logs
+bootstrap/cache/*
+.env
+.env.backup
+node_modules/
+vendor/
+.vscode/
+.idea/
+.git/
+*.log
