@@ -39,16 +39,24 @@
     <main class="container d-flex justify-content-center align-items-center vh-100">
         <form id="registerForm">
             <div class="mb-3">
-                <input type="text" class="form-control" name="name" placeholder="ユーザー名(12)" required maxlength="12">
+                <input type="text" class="form-control" name="name" placeholder="ユーザー名(12)"  maxlength="12">
+                <!-- エラー文表示用 -->
+                <div id="nameError" class="text-danger"></div>
             </div>
             <div class="mb-3">
-                <input type="text" class="form-control" name="login_id" placeholder="ログインID(12)" required maxlength="12">
+                <input type="text" class="form-control" name="login_id" placeholder="ログインID(12)"  maxlength="12">
+                <!-- エラー文表示用 -->
+                <div id="loginIdError" class="text-danger"></div>
             </div>
             <div class="mb-3">
-                <input type="password" class="form-control" name="password" placeholder="パスワード(8~36)" required minlength="8" maxlength="36">
+                <input type="password" class="form-control" name="password" placeholder="パスワード(8~36)" maxlength="36">
+                <!-- エラー文表示用 -->
+                <div id="passwordError" class="text-danger"></div>
             </div>
             <div class="mb-5">
-                <input type="password" class="form-control" name="passwordConfirm" placeholder="パスワード（確認用）" required>
+                <input type="password" class="form-control" name="passwordConfirm" placeholder="パスワード（確認用）" maxlength="36">
+                <!-- エラー文表示用 -->
+                <div id="passwordConfirmError" class="text-danger"></div>
             </div>
             <div>
                 <button type="submit" class="btn btn-primary w-100">登録する</button>

@@ -159,6 +159,13 @@ class PostController extends Controller
     public function deletePost($post_id) {
         DB::beginTransaction();
         try {
+            // post_idの型をチェック数字以外はエラーを返す
+            if (!is_numeric($post_id)) {
+                return response()->json([
+                    'message' => '無効な投稿IDです。'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
             $post = Post::find($post_id);
             if (!$post) {
                 return response()->json([

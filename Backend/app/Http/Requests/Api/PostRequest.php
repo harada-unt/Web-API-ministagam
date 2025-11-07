@@ -25,7 +25,7 @@ class PostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => 'required|max:50',
+            'content' => 'required|max:100',
             'image' => 'required|mimes:jpeg,png,jpg,gif|max:5120',
         ];
     }
@@ -34,7 +34,7 @@ class PostRequest extends FormRequest
     {
         return [
             'content.required' => '投稿本文は必須です。',
-            'content.max' => '投稿本文は50文字以内で入力してください。',
+            'content.max' => '投稿本文は100文字以内で入力してください。',
             'image.required' => '画像ファイルを選択してください。',
             'image.uploaded' => '画像ファイルのアップロードに失敗しました。',
             'image.mimes' => '画像ファイルはjpg, jpeg, png, gif形式である必要があります。',

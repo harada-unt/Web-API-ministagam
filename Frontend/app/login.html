@@ -39,15 +39,17 @@
     <main class="container d-flex justify-content-center align-items-center vh-100">
         <form>
             <div class="mb-3">
-                <input type="text" id="login_id" class="form-control"name="login_id" placeholder="ログインID" required>
+                <input type="text" id="login_id" class="form-control"name="login_id" placeholder="ログインID" required maxlength="12">
+                <!-- エラー文表示用 -->
+                <div id="loginIdError" class="text-danger"></div>
             </div>
-
-            <!-- エラー文表示用 -->
-            <div id="message"></div>
-
             <div class="mb-5">
-                <input type="password" id="password" class="form-control" name="password" placeholder="パスワード" required>
+                <input type="password" id="password" class="form-control" name="password" placeholder="パスワード" required minlength="8" maxlength="36">
+                <!-- エラー文表示用 -->
+                <div id="passwordError" class="text-danger"></div>
             </div>
+            <!-- エラー文表示用 -->
+            <div id="loginError" class="text-danger"></div>
             <div>
                 <button type="button" id="loginSubmitBtn" class="btn btn-primary w-100">ログイン</button>
             </div>

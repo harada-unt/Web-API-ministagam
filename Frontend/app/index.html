@@ -66,6 +66,8 @@
                     <form id="commentForm" class="d-none">
                         <div class="mb-3">
                             <textarea class="form-control" id="commentContent" rows="3" placeholder="コメントする" maxlength="100" required></textarea>
+                            <!-- エラー文表示用 -->
+                            <div id="commentContentError" class="text-danger"></div>
                         </div>
                         <div class="modal-footer">    
                             <button type="button" class="btn btn-secondary d-flex justify-content-end" data-bs-dismiss="modal">キャンセル</button>
@@ -105,10 +107,14 @@
                     <div class="modal-body">                   
                             <div class="mb-3">
                                 <label for="postImage" class="form-label"><i class="bi bi-camera text-primary"></i> 画像</label>
-                                <input class="form-control" id="postImage" type="file" name="image" accept="image/jpg, image/jpeg, image/png, image/gif" required>
-                                <div class="form-text">JPG, JPEG, PNG, GIF（最大2MB）</div>
+                                <input class="form-control" id="postImage" type="file" name="image" accept="image/jpg, image/jpeg, image/png, image/gif">
+                                <div class="form-text">JPG, JPEG, PNG, GIF（最大5MB）</div>
+                                <!-- エラー文表示用 -->
+                                <div id="postImageError" class="text-danger"></div>
                             </div>
-                            <textarea class="form-control" name="content" rows="3" placeholder="キャプション" maxlength="100" required></textarea>
+                            <textarea class="form-control" name="content" rows="3" placeholder="キャプション" maxlength="100"></textarea>
+                            <!-- エラー文表示用 -->
+                            <div id="postContentError" class="text-danger"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>

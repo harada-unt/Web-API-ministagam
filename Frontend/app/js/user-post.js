@@ -313,8 +313,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (response.ok) {
                     // 投稿成功時の処理
                     alert('投稿が成功しました。');
-                    // リダイレクト
-                    getUserPosts(localStorage.getItem('user_id'));
+                    // リダイレクトしmodalを閉じる
+                    getUserPosts(localStorage.getItem('user_id')); 
+                    window.location.href = 'index.html';
+                    const postModalEl = document.getElementById('postModal');
+                    if (postModalEl) {
+                        postModalEl.setAttribute('data-bs-toggle', 'modal');
+                    }
                 } else {
                     const errorData = await response.json();
                     alert(`投稿に失敗しました: ${errorData.message}`);
@@ -332,8 +337,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('投稿削除処理開始');
         const xsrfToken = getCookieValue('XSRF-TOKEN');
         // 本当にログアウトするか確認
-        alert('この投稿を削除しますか？');
-        if (true) {
+        if (confirm('この投稿を削除しますか？')) {
             if (xsrfToken) {
                 try {
                     const url = `${baseUrl}/api/v1/posts/${post_id}`;

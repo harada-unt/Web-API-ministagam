@@ -26,7 +26,7 @@ class  CommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => ['required', 'max: 50'],
+            'content' => ['required', 'max:100'],
         ];
     }
 
@@ -34,22 +34,17 @@ class  CommentRequest extends FormRequest
     {
         return [
             'content.required' => '本文は必須です。',
-            'content.max' => '本文は50文字以内で入力してください。',
-            'image.required' => '画像ファイルを選択してください。',
-            'image.image' => '画像ファイルを選択してください。',
-            'image.mimes' => '画像ファイルはjpg, jpeg, png, gif形式である必要があります。',
-            'image.max' => '画像ファイルは5MB以内である必要があります。'
+            'content.max' => '本文は100文字以内で入力してください。',
         ];
     }
 
-    protected function failledValidation(Validator $validator)
+    protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(
             response()->json([
-                'message' => '無効な入力データです',
+                'message' => '無効な入力データです。',
                 'errors' => $validator->errors(),
             ], Response::HTTP_UNPROCESSABLE_ENTITY)
         );
     }
-
 }

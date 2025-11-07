@@ -1,5 +1,6 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const baseUrl = 'http://127.0.0.1:80';
+    let authUser = null;
 
     function bindEventListeners() {
         // コメント関連のイベント
@@ -21,14 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // コメント削除ボタン
-        const deleteCommentBtn = document.getElementById('deleteCommentBtn');
-        if (deleteCommentBtn) {
-            deleteCommentBtn.addEventListener('click', function() {
-                deleteComment();
-            })
-        }
-
         // コメント件数をクリックするとコメント一覧取得
         document.addEventListener('click', function(e) {
             const link = e.target.closest('.comment-link');
@@ -47,6 +40,35 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     };
+
+    // 認証済みユーザーIDを取得
+    async function fetchAuthUser() {
+        try {
+            const xsrfToken = getCookieValue('XSRF-TOKEN');
+            if (!xsrfToken) {
+                return null;
+            }
+
+            const url = `${baseUrl}/api/v1/auth/user`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
+                },
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return data.user;
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error('ユーザー情報の取得に失敗しました:', error);
+            return null;
+        }
+    }
 
     // Cookieから特定の値を取得する関数
     function getCookieValue(name) {
@@ -81,7 +103,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const commentsContainer = document.getElementById('commentsContainer');
             commentsContainer.innerHTML = ''; // 既存のコメントをクリア
             
-            // コンテナが存在しない場合の安全対策   
+            // コンテナが存在しない場合の安全対策
             if (!commentsContainer) {
                 console.error('commentsContainerが見つかりません');
                 return;
@@ -117,12 +139,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
 
+                if (authUser && authUser.id === comment.user_id) {
+                    commentElement.querySelector(`#commentDeleteBtn${comment.id}`).classList.remove('d-none');
+
+                }
                 commentElement.querySelector(`#commentDeleteBtn${comment.id}`).addEventListener('click', function() {
                     deleteComment(comment.post_id, comment.id);
                 });
 
-                // コメントのユーザーIDと認証済みユーザーIDが一致する場合、削除ボタンを表示する
-                // displayDeleteBtn(comment.user_id, comment.id);
                 commentsContainer.appendChild(commentElement);
             });
 
@@ -170,7 +194,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('commentContent').value = '';                
                 } else {
                     const errorData = await response.json();
-                    alert(`コメントの投稿に失敗しました: ${errorData.message}`);
+
+                    if (errorData.errors) {
+                        document.getElementById('commentContentError').textContent = errorData.errors.content;
+                    }
                 }
             } catch (error) {
                 console.error('サーバーエラーが発生しました。:', error);
@@ -183,8 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // コメントを削除する
     async function deleteComment(post_id, comment_id) {
-        alert('このコメントを削除しますか？');
-        if (true) {
+        if (confirm('このコメントを削除しますか？')) {
             const xsrfToken = getCookieValue('XSRF-TOKEN');
             if (xsrfToken) {
                 try {
@@ -213,8 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+    authUser = await fetchAuthUser();
 
     bindEventListeners();
-
 });

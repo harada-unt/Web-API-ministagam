@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\CommentRequest;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Http\Controllers\Controller;
@@ -20,6 +20,20 @@ class CommentController extends Controller
      */
     public function getComment($post_id) {
         try{
+            // post_idの型をチェック数字以外はエラーを返す
+            if (!is_numeric($post_id)) {
+                return response()->json([
+                    'message' => '無効な投稿IDです。'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            // 投稿の存在チェック
+            $post = Post::find($post_id);
+            if (!$post) {
+                return response()->json([
+                    'message' => '投稿が見つかりません'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
             $comments = Comment::where('post_id', $post_id)
                 ->with('user:id,name')
                 ->orderBy('created_at', 'desc')
@@ -38,16 +52,18 @@ class CommentController extends Controller
     }
 
 
-    public function createComment(Request $request, $post_id) {
+    public function createComment(CommentRequest $request, $post_id) {
         DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'content' => 'required|max:50'
-            ], [
-                'content.required' => 'コメント本文は必須です。',
-                'content.max' => 'コメントは50文字以内で入力してください。'
-            ]);
+            // バリデーション済みのパラメータを取得
+            $validated = $request->validated();
 
+            // post_idの型をチェック数字以外はエラーを返す
+            if (!is_numeric($post_id)) {
+                return response()->json([
+                    'message' => '無効な投稿IDです。'
+                ], Response::HTTP_BAD_REQUEST);
+            }
             // 投稿の存在チェック
             $post = Post::find($post_id);
             if (!$post) {
@@ -83,13 +99,35 @@ class CommentController extends Controller
     public function deleteComment($post_id, $comment_id) {
         DB::beginTransaction();
         try {
+            // post_idの型をチェック数字以外はエラーを返す
+            if (!is_numeric($post_id)) {
+                return response()->json([
+                    'message' => '無効な投稿IDです。'
+                ], Response::HTTP_BAD_REQUEST);
+            }
+            // comment_idの型をチェック数字以外はエラーを返す
+            if (!is_numeric($comment_id)) {
+                return response()->json([
+                    'message' => '無効なコメントIDです。'
+                ], status: Response::HTTP_BAD_REQUEST);
+            }
+
+            // 投稿の存在チェック
             $post = Post::find($post_id);
             if (!$post) {
                 return response()->json([
                     'message' => '投稿が見つかりません。'
                 ], Response::HTTP_NOT_FOUND);
             }
+            // コメントの存在チェック
+            $coment = Comment::find($comment_id);
+            if (!$coment) {
+                return response()->json([
+                    'message' => 'コメントが見つかりません。'
+                ], Response::HTTP_NOT_FOUND);
+            }
 
+            // 自分のコメントかどうかチェック
             $comment = Comment::find($comment_id);
             $user = auth()->user();
             if ($comment->user_id !== $user->id) {

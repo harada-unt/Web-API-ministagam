@@ -126,6 +126,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('authButtons').classList.add('d-none');
         // ユーザー名を表示
         document.getElementById('userNameDisplay').textContent = authUser.name;
+        document.getElementById('userNameDisplay').addEventListener('click', function() {
+            localStorage.setItem('user_id', authUser.id);
+            window.location.href = 'profile.html';
+        });
     
         // フッターの表示切替
         document.getElementById('postBtn').classList.remove('d-none');

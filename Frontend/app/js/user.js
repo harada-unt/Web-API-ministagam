@@ -59,15 +59,13 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('ユーザー登録処理開始');
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
-        
-        // バリデーション
+
         if (data.password !== data.passwordConfirm) {
-            alert('パスワードが一致しません。');
+            document.getElementById('passwordConfirmError').textContent = 'パスワードが一致しません。';
             return;
-        }
-        if (data.password.length < 8) {
-            alert('パスワードは8文字以上で入力してください。');
-            return;
+
+        } else {
+            document.getElementById('passwordConfirmError').textContent = '';
         }
         
         try {
@@ -83,17 +81,20 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 alert('ユーザー登録が完了しました。ログインしてください。');
                 window.location.href = 'login.html';
-            }
-            else {
+            } else {
                 const errorData = await response.json();
-                alert(`ユーザー登録に失敗しました: ${errorData.message}`);
+
+                if (errorData.errors) {
+                    document.getElementById('nameError').textContent = errorData.errors.name;
+                    document.getElementById('loginIdError').textContent = errorData.errors.login_id;
+                    document.getElementById('passwordError').textContent = errorData.errors.password;
+                } 
             }
         } catch (error) {
             console.error('ユーザー登録に失敗しました:', error);
             alert('ユーザー登録に失敗しました。');
         }
     }
-
 
     // プロフィール変更
     async function changeProfile(form) {
@@ -102,18 +103,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
 
-        // バリデーション
         if (data.password !== data.passwordConfirm) {
-            alert('パスワードが一致しません。');
+            document.getElementById('passwordConfirmError').textContent = 'パスワードが一致しません。';
             return;
         }
-        
-        // パスワードの入力がある場合、8文字以上であることを確認  入力がない場合はスキップ
-        if (data.password && data.password.length < 8) {
-            alert('パスワードは8文字以上で入力してください。');
-            return;
-        }
-
+    
         if (xsrfToken) {
             try {
                 const url =  `${baseUrl}/api/v1/users/profile`;
@@ -125,16 +119,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json',
                     'X-XSRF-TOKEN': decodeURIComponent(xsrfToken),
                 },
+                
                 body: JSON.stringify(data)
                 });
 
                 if (response.ok) {
                     // プロフィール更新成功時の処理
                     alert('プロフィールの更新が完了しました。')
-                    window.location.href = 'profile.html';
+                    window.location.href = 'login.html';
                 } else {
                     const errorData = await response.json();
-                    alert(`プロフィールの更新に失敗しました: ${errorData.message}`);
+
+                    if (errorData.errors) {
+                        document.getElementById('nameError').textContent = errorData.errors.name;
+                        document.getElementById('passwordError').textContent = errorData.errors.password;
+                    }
                 }
             } catch (error) {
                 console.error('プロフィールの更新に失敗しました:', error);

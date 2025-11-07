@@ -5,13 +5,19 @@ info:
   description: |
     Instagram風アプリmInistagamのAPI仕様書
     ## 認証について
-    - JWT/Laravel Sanctumトークンベース認証
-    - 認証が必要なエンドポイントは `Authorization: Bearer {token}` ヘッダーが必要
+    - Laravel Sanctum SPA認証（クッキーベース）
+    - 認証前に必ず `/sanctum/csrf-cookie` にアクセスしてCSRFトークンを取得
+    -  ログイン後は自動的にセッションクッキーが設定される
+    ## SPA認証フロー
+    1. `/sanctum/csrf-cookie` でCSRFトークン取得
+    2. `/auth/login` でログイン（CSRFトークンをヘッダーに含める）
+    3. 以降のリクエストは自動的にクッキーで認証され
     ## エラーレスポンス
     - 400: バリデーションエラー
     - 401: 認証エラー
     - 403: 権限エラー
     - 404: リソースが見つからない
+    - 419: CSRFトークンが無効
     - 422: バリデーションエラー（詳細）
     - 500: サーバーエラー
   version: 1.0.0
@@ -20,8 +26,10 @@ servers:
     description: 開発環境
     
 tags:
+  - name: CSRF
+    description: CSRF保護
   - name: 認証
-    description:  ユーザ認証関連
+    description: ユーザ認証関連
   - name: ユーザ管理
     description: ユーザ情報管理
   - name: 投稿管理
@@ -31,14 +39,49 @@ tags:
 
 ## エンドポイント
 paths:
+  
+  ## CSRF保護API
+  /sanctum/csrf-cookie:
+    get:
+      tags: 
+        - CSRF
+      summary: CSRFトークン取得
+      description: |
+        SPA認証用のCSRFトークンをクッキーに設定
+        - 認証前に必ず最初にアクセスが必要
+        - `XSRF-TOKE`クッキーが設定される
+        - フロントエンドは`X-XSRF-TOKEN`ヘッダーでトークンを送信
+      responses:
+        '204':
+          description: CSRFトークン設定完了
+          headers:
+            Set-Cookie:
+              description: XSRF-TOKENクッキー
+              schema:
+                type: string
+                example: XSRF-TOKEN=eyJpdiI6IjdkNjg...; path=/; samesite=lax
+        '500':
+          $ref: '#/components/responses/ServerError'
 
   ## 認証API
   /auth/login:
     post:
       tags:
         - 認証
-      summary: ログイン
-      description: ログインＩＤとパスワードでログインし、認証トークンを取得
+      summary: ログイン(SPA認証)
+      description: |
+        ログインＩＤとパスワードでSAP認証を実行
+        - 事前に`/session/csrf-cookie`でCSRFトークンを取得が必要
+        - 成功時にセッションクッキーが自動設定される
+        - レスポンスにトークンは含まれない
+      parameters:
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          description: CSRFトークン
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       requestBody:
         required: true
         content: 
@@ -59,6 +102,12 @@ paths:
       responses:
         '200':
           description: ログイン成功
+          headers:
+            Set-Cookie:
+              description: Laravel_sessionクッキー
+              schema:
+                type: string
+                example: laravel_session=eyJpdiI6IjdkNjg...; path=/; httponly; samesite=lax
           content:
             application/json:
               schema:
@@ -67,23 +116,13 @@ paths:
                   message:
                     type: string
                     example: ログインが完了しました
-                  token:
-                    type: string
-                    example: 1|abc123def456ghi789jkl012mno345pqr678stu901vwx234yz
-                  token_type:
-                    type: string
-                    example: Bearer
                   user:
                     $ref: '#/components/schemas/User'
                   meta:
                     $ref: '#/components/schemas/Meta'
               
-        '401':
-          description: ログイン失敗
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '500':
           $ref: '#/components/responses/ServerError'
                 
@@ -92,12 +131,27 @@ paths:
       tags:
         - 認証
       summary: ログアウト
-      description: 現在の認証トークンを無効化
-      security:
-        - bearerAuth: []
+      description: |
+        現在のセッションを無効化してログアウト
+          - セッションクッキーが削除される
+          - CSRFトークンが必要
+      parameters:
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          description: CSRFトークン
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       responses:
         '200':
           description: ログアウト成功
+          headers:
+            Set-Cookie:
+              description: セッションクッキー削除
+              schema:
+                type: string
+                example: laravel_session=; path=/; expires=Thu, 01-Jan-1970 00:00:01 GMT
           content:
             application/json:
               schema:
@@ -108,6 +162,8 @@ paths:
                     example: ログアウトしました
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '500':
           $ref: '#/components/responses/ServerError'
                     
@@ -116,9 +172,9 @@ paths:
       tags:
         - 認証
       summary: 認証情報取得成功
-      description: 現在ログイン中のユーザー情報取得
-      security:
-        - bearerAuth: []
+      description: |
+        現在ログイン中のユーザー情報取得
+        - セッションクッキーによる自動認証
       responses:
         '200':
           description: ユーザー情報取得成功
@@ -181,9 +237,17 @@ paths:
       tags:
         - ユーザ管理
       summary: プロフィール更新
-      description: ユーザ名、パスワードの変更
-      security:
-        - bearerAuth: []
+      description: |
+        ユーザ名、パスワードの変更
+        - セッション認証とCSRFトークンが必要
+      parameters:
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          description: CSRFトークン
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       requestBody:
         content:
           application/json:
@@ -213,6 +277,8 @@ paths:
                     $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '422':
           $ref: '#/components/responses/ValidationError'
         '500':
@@ -261,9 +327,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                    example: true
+                  status:
+                    type: string
+                    example: success
+                  current_page:
+                    type: integer
+                    example: 1
                   data:
                     type: array
                     items:
@@ -281,9 +350,17 @@ paths:
       tags:
         - 投稿管理
       summary: 新規投稿作成
-      description: 新しい投稿を作成
-      security:
-        - bearerAuth: []
+      description: |
+        新しい投稿を作成
+        - セッション認証とCSRFトークンが必要
+      parameters:
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          description: CSRFトークン
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       requestBody:
         required: true
         content:
@@ -319,6 +396,8 @@ paths:
                     $ref: '#/components/schemas/Post'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '422':
           $ref: '#/components/responses/ValidationError'
         '500':
@@ -329,9 +408,9 @@ paths:
       tags:
         - 投稿管理
       summary: 投稿削除
-      description: 指定された投稿を削除（投稿者のみ可）
-      security:
-        - bearerAuth: []
+      description: |
+        指定された投稿を削除（投稿者のみ可）
+        - セッション認証とCSRFトークンが必要
       parameters:
         - name: post_id
           in: path
@@ -339,6 +418,12 @@ paths:
           schema:
             type: integer
           example: 1
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          schema: 
+            type: string
+          example: eyJpdiI6IjdkNjg...
       responses:
         '200':
           description: 削除可能
@@ -356,6 +441,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '500':
           $ref: '#/components/responses/ServerError'
           
@@ -411,8 +498,6 @@ paths:
         - コメント管理
       summary: 投稿のコメント一覧を取得
       description: 指定された投稿のコメントを全件取得
-      security:
-        - bearerAuth: []
       responses:
         '200':
           description: コメント一覧取得成功
@@ -436,9 +521,17 @@ paths:
       tags:
         - コメント管理
       summary: コメント作成
-      description: 指定された投稿にコメントを追加
-      security:
-        - bearerAuth: []
+      description: |
+        指定された投稿にコメントを追加
+        - セッション認証とCSRFトークンが必要
+      parameters:
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          description: CSRFトークン
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       requestBody:
         required: true
         content:
@@ -470,6 +563,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '419':
+          $ref: '#/components/responses/CSRFError'  
         '422':
           $ref: '#/components/responses/ValidationError'
         '500':
@@ -480,9 +575,9 @@ paths:
       tags:
         - コメント管理
       summary:  コメントの削除
-      description:  指定したコメントを削除（自分のコメントのみ）
-      security:
-        - bearerAuth: []
+      description:  |
+        指定したコメントを削除（自分のコメントのみ）
+        - セッション認証とCSRFトークンが必要
       parameters:
         - name: post_id
           in: path
@@ -496,6 +591,12 @@ paths:
           schema:
             type: integer
           example: 1
+        - name: X-XSRF-TOKEN
+          in: header
+          required: true
+          schema:
+            type: string
+          example: eyJpdiI6IjdkNjg...
       responses:
         '200':
           description: 削除成功
@@ -513,6 +614,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '419':
+          $ref: '#/components/responses/CSRFError'
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -521,13 +624,6 @@ paths:
 
 ## コンポーネント定義
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  
   schemas:
     User:
       type: object
@@ -616,10 +712,6 @@ components:
       type: object
       description: Laravel標準のページネーション情報
       properties:
-        current_page:
-          type: integer
-          description: 現在のページ番号
-          example: 1
         per_page:
           type: integer
           description: 1ページ当たりの件数
@@ -628,23 +720,30 @@ components:
           type: integer
           description: 全データ件数
           example: 1000
+        first_page_url:
+          type: string
+          description: 最初のページのURL
+          example: "https://api.example.com/api/v1/posts?page=1"
         last_page:
           type: integer
           description: 最終ページ番号
           example: 100
+        last_page_url:
+          type: string
+          description: 最後のページのURL
+          example: "https://api.example.com/api/v1/posts?page=100"
+        next_page_url:
+          type: string
+          description: 次のページのURL
+          example: "https://api.example.com/api/v1/posts?page=2"
         from:
           type: integer
           description: 現在ページの開始位置
           example: 1
-        to:
-          type: integer
-          nullable: true
-          description: 現在ページの終了位置
-          example: 10
-        has_more_pages:
-          type: boolean
-          description: 次のページが存在するか
-          example: true
+        path:
+          type: string
+          description: URLのパス
+          example: "https://api.example.com/api/v1/posts"
         links:
           type: object
           description: ページネーションリンク
@@ -659,17 +758,25 @@ components:
               nullable: true
               description: 最後のページのURL
               example: "https://api.example.com/api/v1/posts?page=100"
-            prev:
-              type: string
-              nullable: true
-              description: 前のページのURL
-              example: null
             next:
               type: string
               nullable: true
               description: 次のページのURL
               example: "https://api.example.com/api/v1/posts?page=2"
-  
+        has_more_pages:
+          type: boolean
+          description: 次のページが存在するか
+          example: true
+        prev_page_url:
+            type: string
+            nullable: true
+            description: 前のページのURL
+            example: null
+        to:
+          type: integer
+          nullable: true
+          description: 現在ページの終了位置
+          example: 10
     Meta:
       type: object
       properties:
@@ -746,7 +853,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            message: 認証が必要です
+            message: Unauthenticated
             
     Forbidden:
       description: 権限エラー
@@ -773,6 +880,15 @@ components:
           schema:
             $ref: '#/components/schemas/ValidationError'
             
+    CSRFError:
+      description: CSRFトークンエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: CSRFトークンが無効です
+            
     ServerError:
       description: サーバーエラー
       content:
@@ -780,4 +896,9 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            message: サーバーの応答がありません
+            message: サーバーのエラーが発生しました。
+
+
+      
+        
+      
