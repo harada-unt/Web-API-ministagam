@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.ok) {
                     // プロフィール更新成功時の処理
                     alert('プロフィールの更新が完了しました。')
-                    window.location.href = 'login.html';
+                    window.location.href = 'profile.html';
                 } else {
                     const errorData = await response.json();
 

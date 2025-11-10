@@ -232,12 +232,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('投稿の取得に失敗しました:', error);
 
             if (page === 1) {
-                const postsContainer = document.getElementById('usetTimeline');
+                const postsContainer = document.getElementById('userTimeline');
                 postsContainer.innerHTML = `
                     <div class="text-center vh-100 py-5" id="noPostsMessage">
                         <i class="bi bi-camera display-1 text-muted"></i>
                         <h4 class="text-muted mt-3">まだ投稿がありません</h4>
-                        <p class="text-muted">投稿データを読み込めませんでした</p>
+                        <p class="text-muted">投稿データをがありません</p>
                     </div>
                 `;
                 stopObserver(); // 監視を停止
@@ -322,7 +322,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 } else {
                     const errorData = await response.json();
-                    alert(`投稿に失敗しました: ${errorData.message}`);
+
+                    if (errorData.errors) {
+                        document.getElementById('postImageError').textContent = errorData.errors.image;
+                        document.getElementById('postContentError').textContent = errorData.errors.content;
+                    }
                 }
             } catch (error) {
                 console.error('投稿の作成に失敗しました:', error);
