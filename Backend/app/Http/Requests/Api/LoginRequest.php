@@ -26,7 +26,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'login_id' => ['required','string','max:12'],
+            'login_id' => ['required','string','max:24'],
             'password' => ['required','string','min:8','max:36'],
         ];
     }
@@ -35,7 +35,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'login_id.required' => 'ログインIDは必須です。',
-            'login_id.max' => 'ログインIDは12文字以内で入力してください。',
+            'login_id.max' => 'ログインIDは24文字以内で入力してください。',
             'password.required' => 'パスワードは必須です。',
             'password.min' => 'パスワードは8~36文字以内で入力してください。',
             'password.max' => 'パスワードは8~36文字以内で入力してください。'
