@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    ports:
+      - "8000:80"
+  
+# Mouting the application code into the container
+    volumes:
+      - ./:/var/www/html
+    
+    container_name: apache-webserver
+    restart: unless-stopped

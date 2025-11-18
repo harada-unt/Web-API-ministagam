@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', async function() {
     // ユーザーの投稿を取得し表示する
     const user_id = localStorage.getItem('user_id');
-    const baseUrl = 'http://127.0.0.1:80';
+    const baseUrl = 'http://127.0.0.1';
     let authUser = null; // 認証済みユーザー
     let currentPage = 1; // 現在のページ番号
     let isLoading = false; // ロード中フラグ

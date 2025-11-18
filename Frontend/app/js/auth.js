@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const baseUrl = 'http://127.0.0.1:80';
+    const baseUrl = 'http://127.0.0.1';
     
     // Cookieから特定の値を取得する関数
     function getCookieValue(name) {
