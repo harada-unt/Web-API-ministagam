@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id');
             $table->foreignId('post_id');
-            $table->string('content', 50);
+            $table->string('content', 100);
             $table->timestamps();
             $table->softDeletes();
 

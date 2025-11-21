@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id');
-            $table->string('content', 50);
+            $table->string('content', 100);
             $table->string('image_path', 500);
             $table->integer('comment_count')->default(0);
             $table->timestamps();

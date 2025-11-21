@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    const baseUrl = 'http://127.0.0.1';
+    const baseUrl = 'http://localhost';
     let authUser = null;
 
     function bindEventListeners() {

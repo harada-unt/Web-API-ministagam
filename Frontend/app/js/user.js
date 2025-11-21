@@ -1,32 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const baseUrl = 'http://127.0.0.1';
+    const baseUrl = 'http://localhost';
 
     // Cookieから特定の値を取得する関数
     function getCookieValue(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-
-    async function getCsrfToken() {
-        try {
-            const url = `${baseUrl}/sanctum/csrf-cookie`;
-            const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                },
-            });
-            if (!response.ok) {
-                throw new Error('Csrfトークンの取得に失敗しました');
-            }
-            console.log('CSRFトークンの取得に成功しました');
-            
-        } catch (error) {
-            console.error('CSRFトークンの取得に失敗しました:', error);
-            throw error;
-        }
     }
 
     function bindEventListeners() {
