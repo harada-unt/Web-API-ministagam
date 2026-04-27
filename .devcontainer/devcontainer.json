@@ -1,0 +1,39 @@
+{
+  "name": "Ministagam Web API",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/var/www/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        "GitHub.copilot",
+        "mhutchie.git-graph",
+        "ms-vscode.npm"
+      ],
+      "settings": {
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "php.validate.run": "onType",
+        "editor.fontSize": 14,
+        "editor.formatOnSave": true,
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      }
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "forwardPorts": [80, 3306],
+  "postCreateCommand": "cd /var/www/app && composer install && npm install && php artisan key:generate && php artisan migrate:fresh --seed",
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,readonly"
+  ]
+}

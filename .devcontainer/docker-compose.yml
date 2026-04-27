@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../Backend/
+      dockerfile: ../.devcontainer/Dockerfile
+      args:
+        PHP_VERSION: "8.3"
+        LARAVEL_VERSION: "12.*"
+        PUBLIC_DIR: "app/public"
+        USERNAME: "vscode"
+    
+    container_name: ministagam_app_devcontainer
+    
+    ports:
+      - "80:80"
+      - "9003:9003"
+    
+    environment:
+      TZ: "Asia/Tokyo"
+      XDEBUG_MODE: "debug"
+      XDEBUG_START_WITH_REQUEST: "yes"
+      XDEBUG_IDEKEY: "VSCODE"
+      DB_HOST: "mysql"
+      DB_DATABASE: "ministagam_db"
+      DB_USERNAME: "t-ha3minist"
+      DB_PASSWORD: "tH8dV30&or5"
+      APP_DEBUG: "true"
+      APP_ENV: "local"
+    
+    volumes:
+      - ../Backend:/var/www/app
+      - app-vendor:/var/www/app/vendor
+      - app-node-modules:/var/www/app/node_modules
+    
+    depends_on:
+      - mysql
+    
+    networks:
+      - app-network
+    
+    command: apache2-foreground
+
+  mysql:
+    image: mysql:8.0.36
+    
+    container_name: ministagam_mysql_devcontainer
+    
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_0900_ai_ci"
+    
+    environment:
+      TZ: "Asia/Tokyo"
+      MYSQL_DATABASE: "ministagam_db"
+      MYSQL_USER: "t-ha3minist"
+      MYSQL_PASSWORD: "tH8dV30&or5"
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    
+    ports:
+      - "3306:3306"
+    
+    volumes:
+      - mysql-data:/var/lib/mysql
+    
+    networks:
+      - app-network
+
+volumes:
+  app-vendor:
+  app-node-modules:
+  mysql-data:
+
+networks:
+  app-network:
+    driver: bridge

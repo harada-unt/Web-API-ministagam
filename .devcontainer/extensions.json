@@ -1,0 +1,51 @@
+{
+  "recommendations": [
+    // リモート開発
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-wsl",
+    "ms-vscode.remote-repositories",
+    
+    // Git 管理
+    "eamodio.gitlens",
+    "donjayamanne.githistory",
+    
+    // PHP 開発
+    "DEVSENSE.phptools-vscode",
+    "DEVSENSE.intelli-php-vscode",
+    "neilbrayfield.php-docblocker",
+    
+    // Laravel
+    "onecentlin.laravel-blade",
+    "amiralizadeh9480.laravel-extra-intellisense",
+    "capon.laravel-blade",
+    
+    // JavaScript/Node.js
+    "ms-vscode.npm",
+    "ms-vscode.vscode-node-debug2",
+    
+    // フォーマッタ・リンター
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    
+    // テスト
+    "ryanluker.vscode-coverage-gutters",
+    
+    // コンテナ・Docker
+    "ms-azuretools.vscode-docker",
+    
+    // データベース
+    "cweijan.vscode-mysql-client2",
+    
+    // その他の便利なツール
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "ms-vscode.makefile-tools",
+    "redhat.vscode-yaml",
+    "ms-vscode.vscode-typescript-next",
+    "ms-vscode.wordcount",
+    "mhutchie.git-graph",
+    "formulahendry.auto-rename-tag",
+    "bradlc.vscode-tailwindcss"
+  ]
+}

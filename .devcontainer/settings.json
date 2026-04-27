@@ -1,0 +1,55 @@
+{
+  // PHP 設定
+  "php.validate.executablePath": "/usr/local/bin/php",
+  "php.validate.run": "onType",
+  "php.suggest.basic": true,
+
+  // エディタ設定
+  "editor.fontSize": 14,
+  "editor.formatOnSave": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "editor.trimAutoWhitespace": true,
+  "editor.wordWrap": "on",
+
+  // ファイル設定
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+
+  // Git 設定
+  "git.autofetch": true,
+  "git.confirmSync": false,
+
+  // ターミナル設定
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.fontSize": 13,
+
+  // 言語固有の設定
+  "[php]": {
+    "editor.wordBasedSuggestions": true,
+    "editor.suggest.insertMode": "replace"
+  },
+  "[javascript]": {
+    "editor.suggest.insertMode": "replace"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+
+  // 検索設定
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/vendor": true,
+    ".git": true
+  },
+
+  // 拡張機能 - GitLens
+  "gitlens.showWelcomeOnInstall": false,
+  "gitlens.showWhatsNewAfterUpgrades": false,
+
+  // デバッグ設定
+  "debug.console.fontSize": 13,
+  "debug.openDebug": "openOnSessionStart"
+}
